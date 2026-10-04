@@ -53,12 +53,20 @@ class HistoryViewModel(
                     )
                 }
 
+                val defaultExercise = _uiState.value.selectedExerciseId?.let { id -> exercises.firstOrNull { it.id == id } }
+                    ?: exercises.firstOrNull()
+
+                val (records, prString) = computeExerciseRecords(workouts, defaultExercise?.id, _uiState.value.recordLimit)
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         workouts = details,
                         filteredWorkouts = filterList(details, it.searchQuery),
-                        availableExercises = exercises
+                        availableExercises = exercises,
+                        selectedExerciseId = defaultExercise?.id,
+                        exerciseRecords = records,
+                        bestPrString = prString
                     )
                 }
             } else {
@@ -69,6 +77,30 @@ class HistoryViewModel(
                     )
                 }
             }
+        }
+    }
+
+    fun onSelectExercise(exerciseId: String) {
+        val workouts = _uiState.value.workouts.map { it.workout }
+        val (records, prString) = computeExerciseRecords(workouts, exerciseId, _uiState.value.recordLimit)
+        _uiState.update {
+            it.copy(
+                selectedExerciseId = exerciseId,
+                exerciseRecords = records,
+                bestPrString = prString
+            )
+        }
+    }
+
+    fun onSelectRecordLimit(limit: Int) {
+        val workouts = _uiState.value.workouts.map { it.workout }
+        val (records, prString) = computeExerciseRecords(workouts, _uiState.value.selectedExerciseId, limit)
+        _uiState.update {
+            it.copy(
+                recordLimit = limit,
+                exerciseRecords = records,
+                bestPrString = prString
+            )
         }
     }
 
@@ -90,6 +122,52 @@ class HistoryViewModel(
         }
     }
 
+    private fun computeExerciseRecords(
+        workouts: List<org.marcosnpereira03.gymtracker.domain.model.Workout>,
+        exerciseId: String?,
+        limit: Int
+    ): Pair<List<ExerciseSessionRecord>, String?> {
+        if (exerciseId == null) return Pair(emptyList(), null)
+
+        val matchedRecords = mutableListOf<ExerciseSessionRecord>()
+        var bestSet: org.marcosnpereira03.gymtracker.domain.model.WorkoutSet? = null
+
+        workouts.sortedByDescending { it.date }.forEach { workout ->
+            val matchingSets = workout.sets.filter { it.exerciseId == exerciseId }
+            if (matchingSets.isNotEmpty()) {
+                val dateStr = workout.date.toString().substringBefore("T")
+                matchedRecords.add(
+                    ExerciseSessionRecord(
+                        workoutId = workout.id,
+                        workoutTitle = workout.title,
+                        workoutDate = dateStr,
+                        sets = matchingSets
+                    )
+                )
+
+                matchingSets.forEach { set ->
+                    if (bestSet == null) {
+                        bestSet = set
+                    } else {
+                        val currentBest = bestSet!!
+                        if (set.weightKg > currentBest.weightKg ||
+                            (set.weightKg == currentBest.weightKg && set.reps > currentBest.reps)
+                        ) {
+                            bestSet = set
+                        }
+                    }
+                }
+            }
+        }
+
+        val limitedRecords = matchedRecords.take(limit)
+        val prDisplay = bestSet?.let {
+            val weightStr = if (it.weightKg % 1.0 == 0.0) "${it.weightKg.toInt()}" else "${it.weightKg}"
+            "$weightStr kg × ${it.reps} reps"
+        }
+        return Pair(limitedRecords, prDisplay)
+    }
+
     private fun filterList(list: List<WorkoutHistoryDetail>, query: String): List<WorkoutHistoryDetail> {
         if (query.isBlank()) return list
         return list.filter {
@@ -99,3 +177,4 @@ class HistoryViewModel(
         }
     }
 }
+

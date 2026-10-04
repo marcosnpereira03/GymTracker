@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,28 +51,45 @@ fun ExercisesScreen(
     }
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = Zinc950,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Catálogo de Ejercicios",
-                        color = TextPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = "Catálogo de Ejercicios",
+                            color = White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${state.exercises.size} ejercicios registrados",
+                            color = Zinc400,
+                            fontSize = 12.sp
+                        )
+                    }
                 },
                 actions = {
-                    IconButton(onClick = { showCreateDialog = true }) {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Emerald400)
+                            .clickable { showCreateDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Nuevo Ejercicio",
-                            tint = EmeraldPrimary
+                            tint = Color.Black,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkBackground
+                    containerColor = Zinc950
                 )
             )
         }
@@ -86,75 +104,76 @@ fun ExercisesScreen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChange(it) },
-                placeholder = { Text("Buscar por nombre o músculo...", color = TextMuted) },
+                placeholder = { Text("Buscar ejercicio...", color = Zinc500, fontSize = 14.sp) },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Zinc500)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 8.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedBorderColor = EmeraldPrimary,
-                    unfocusedBorderColor = DarkSurfaceBorder,
-                    focusedContainerColor = DarkSurfaceCard,
-                    unfocusedContainerColor = DarkSurfaceCard
-                )
+                    focusedTextColor = White,
+                    unfocusedTextColor = White,
+                    focusedBorderColor = Emerald400,
+                    unfocusedBorderColor = Zinc800,
+                    focusedContainerColor = Zinc900,
+                    unfocusedContainerColor = Zinc900
+                ),
+                singleLine = true
             )
 
-            // Chips de filtro por grupo muscular
+            // Chips de filtro por grupo muscular (horizontal scroll)
+            val defaultFilterCategories = listOf("Todos", "Pecho", "Espalda", "Cuádriceps", "Isquios", "Glúteos", "Hombros", "Bíceps", "Tríceps")
+            val availableCategories = (listOf("Todos") + (state.muscleGroups.filterNot { it == "Todos" })).distinct()
+            val categoriesToShow = if (availableCategories.size > 1) availableCategories else defaultFilterCategories
+
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(state.muscleGroups) { muscle ->
-                    val isSelected = state.selectedMuscleGroup == muscle
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.onSelectMuscleGroup(muscle) },
-                        label = {
-                            Text(
-                                text = muscle,
-                                color = if (isSelected) TextOnEmerald else TextSecondary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = EmeraldPrimary,
-                            containerColor = DarkSurfaceCard
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (isSelected) EmeraldPrimary else DarkSurfaceBorder,
-                            enabled = true,
-                            selected = isSelected
+                items(categoriesToShow) { muscle ->
+                    val isSelected = state.selectedMuscleGroup == muscle || (muscle == "Todos" && (state.selectedMuscleGroup == "Todos" || state.selectedMuscleGroup.isBlank()))
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isSelected) Emerald400 else Zinc800)
+                            .clickable { viewModel.onSelectMuscleGroup(muscle) }
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = muscle,
+                            color = if (isSelected) Color.Black else Zinc400,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
-                    )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             if (state.isLoading && state.exercises.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = EmeraldPrimary)
+                    CircularProgressIndicator(color = Emerald400)
                 }
             } else if (state.filteredExercises.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No se encontraron ejercicios.", color = TextMuted, fontSize = 14.sp)
+                    Text("No se encontraron ejercicios.", color = Zinc500, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
                 ) {
                     items(items = state.filteredExercises, key = { it.exercise.id }) { item ->
@@ -178,86 +197,82 @@ fun ExerciseItemCard(
     onToggleExpand: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggleExpand() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurfaceCard),
-        border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder)
+        colors = CardDefaults.cardColors(containerColor = Zinc900),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Icono Mancuerna estilizado
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Zinc800)
+                        .border(1.dp, Zinc700, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🏋️", fontSize = 18.sp)
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = data.exercise.name,
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        text = data.exercise.name.uppercase(),
+                        color = White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = data.exercise.muscleGroup,
-                        color = EmeraldPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        text = "${data.exercise.muscleGroup} • Máquina / Peso Libre",
+                        color = Zinc400,
+                        fontSize = 12.sp
                     )
                 }
 
-                // 1RM Récord Badge
+                // 1RM Récord Badge si existe
                 if (data.maxEstimated1Rm > 0.0) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(AccentCyan.copy(alpha = 0.15f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .background(Emerald900.copy(alpha = 0.5f))
+                            .border(1.dp, Emerald400.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Récord: ${data.maxEstimated1Rm} kg",
-                            color = AccentCyan,
-                            fontSize = 12.sp,
+                            text = "${data.maxEstimated1Rm} kg",
+                            color = Emerald400,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Botón de expansión para ver el historial de series
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DarkSurface)
-                    .clickable { onToggleExpand() }
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (data.history.isNotEmpty()) "Ver últimas series (${data.history.size})" else "Sin series registradas",
-                    color = TextSecondary,
-                    fontSize = 12.sp
-                )
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            // Despliegue de series anteriores organizadas por fecha de realización
+            // Despliegue de series anteriores si está expandido
             AnimatedVisibility(visible = isExpanded && data.history.isNotEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp),
+                        .padding(top = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    data.history.take(6).forEach { historyItem ->
+                    Text(
+                        text = "Últimas series realizadas:",
+                        color = Zinc400,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    data.history.take(5).forEach { historyItem ->
                         HistorySetRow(historyItem)
                     }
                 }

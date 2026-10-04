@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +39,7 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
-        containerColor = DarkBackground
+        containerColor = Zinc950
     ) { paddingValues ->
         if (state.isLoading && state.recentWorkouts.isEmpty()) {
             Box(
@@ -46,7 +48,7 @@ fun HomeScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = EmeraldPrimary)
+                CircularProgressIndicator(color = Emerald400)
             }
         } else {
             LazyColumn(
@@ -57,33 +59,58 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
             ) {
-                // Header
+                // Header (GYM TRACKER + Fecha + Botón Salir)
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = "GYM TRACKER",
-                            color = EmeraldPrimary,
-                            fontSize = 12.sp,
+                            color = Emerald400,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.5.sp
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Sábado, 3 De Octubre",
-                                color = TextPrimary,
-                                fontSize = 24.sp,
+                                text = "Domingo, 4 De Octubre",
+                                color = White,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold
                             )
+
+                            // Botón Salir estilo pill
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Zinc900)
+                                    .border(1.dp, Zinc700, RoundedCornerShape(10.dp))
+                                    .clickable { /* Salir / Ajustes */ }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                    contentDescription = "Salir",
+                                    tint = Zinc400,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Salir",
+                                    color = Zinc400,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }
 
-                // Hero Card "¿Qué entrenamos hoy?"
+                // Hero Card "¿Qué entrenamos hoy?" (Degradado Emerald900 -> Emerald700)
                 item {
                     Box(
                         modifier = Modifier
@@ -91,13 +118,13 @@ fun HomeScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(EmeraldGradientStart, EmeraldGradientEnd)
+                                    colors = listOf(Emerald900, Emerald700)
                                 )
                             )
                             .padding(20.dp)
                     ) {
                         Column {
-                            // Greeting pill
+                            // Saludo usuario
                             Row(
                                 modifier = Modifier
                                     .clip(CircleShape)
@@ -107,17 +134,17 @@ fun HomeScreen(
                             ) {
                                 Text(
                                     text = "👋 Hola marcosnpereira03",
-                                    color = Color.White,
+                                    color = White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             Text(
                                 text = "¿Qué entrenamos hoy?",
-                                color = Color.White,
+                                color = White,
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -126,7 +153,7 @@ fun HomeScreen(
 
                             Text(
                                 text = "Registra tus entrenamientos en tiempo real.",
-                                color = Color.White.copy(alpha = 0.85f),
+                                color = White.copy(alpha = 0.85f),
                                 fontSize = 13.sp
                             )
 
@@ -137,7 +164,7 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
+                                    containerColor = White,
                                     contentColor = Color.Black
                                 )
                             ) {
@@ -163,14 +190,14 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Card Peso
+                        // Card 1: Peso Corporal
                         Card(
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { onNavigateToProfile() },
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = DarkSurfaceCard),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder)
+                            colors = CardDefaults.cardColors(containerColor = Zinc900),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Row(
@@ -180,7 +207,7 @@ fun HomeScreen(
                                 ) {
                                     Text(
                                         text = "Peso Corporal",
-                                        color = TextSecondary,
+                                        color = Zinc400,
                                         fontSize = 12.sp
                                     )
                                     Text(
@@ -189,30 +216,39 @@ fun HomeScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                val weightText = state.latestWeight?.let { "${it.weightKg} kg" } ?: "--.- kg"
-                                Text(
-                                    text = weightText,
-                                    color = TextPrimary,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                val weightVal = state.latestWeight?.weightKg ?: 88.0
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = "${weightVal.toInt()}",
+                                        color = White,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "kg",
+                                        color = Zinc400,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(bottom = 2.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Toca para anotar hoy",
-                                    color = TextMuted,
+                                    text = "Último registrado",
+                                    color = Zinc500,
                                     fontSize = 11.sp
                                 )
                             }
                         }
 
-                        // Card Historial
+                        // Card 2: Historial de Entreno
                         Card(
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { onNavigateToHistory() },
                             shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = DarkSurfaceCard),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder)
+                            colors = CardDefaults.cardColors(containerColor = Zinc900),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Row(
@@ -222,7 +258,7 @@ fun HomeScreen(
                                 ) {
                                     Text(
                                         text = "Historial de Entreno",
-                                        color = TextSecondary,
+                                        color = Zinc400,
                                         fontSize = 12.sp
                                     )
                                     Text(
@@ -233,14 +269,14 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Ver Historial",
-                                    color = TextPrimary,
-                                    fontSize = 16.sp,
+                                    color = White,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Toca para ver tus entrenamientos",
-                                    color = TextMuted,
+                                    color = Zinc500,
                                     fontSize = 11.sp,
                                     maxLines = 1
                                 )
@@ -258,22 +294,22 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "ÚLTIMO ENTRENAMIENTO",
-                            color = TextSecondary,
-                            fontSize = 13.sp,
+                            color = Zinc400,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
                         Text(
                             text = "Ver todos →",
-                            color = EmeraldPrimary,
-                            fontSize = 13.sp,
+                            color = Emerald400,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.clickable { onNavigateToHistory() }
                         )
                     }
                 }
 
-                // Lista de entrenamientos recientes
+                // Lista del último entrenamiento
                 if (state.recentWorkouts.isEmpty()) {
                     item {
                         Box(
@@ -284,14 +320,14 @@ fun HomeScreen(
                         ) {
                             Text(
                                 text = "Aún no hay entrenamientos registrados.\n¡Comienza uno hoy!",
-                                color = TextMuted,
+                                color = Zinc500,
                                 fontSize = 14.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
                     }
                 } else {
-                    items(items = state.recentWorkouts, key = { it.id }) { workout ->
+                    items(items = state.recentWorkouts.take(3), key = { it.id }) { workout ->
                         WorkoutSummaryCard(
                             workout = workout,
                             onClick = { onWorkoutClick(workout.id) }
@@ -313,8 +349,8 @@ fun WorkoutSummaryCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurfaceCard),
-        border = androidx.compose.foundation.BorderStroke(1.dp, DarkSurfaceBorder)
+        colors = CardDefaults.cardColors(containerColor = Zinc900),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
     ) {
         Row(
             modifier = Modifier
@@ -331,13 +367,13 @@ fun WorkoutSummaryCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(DarkSurface),
+                        .background(Zinc800),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.DateRange,
                         contentDescription = null,
-                        tint = TextSecondary,
+                        tint = Zinc400,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -347,7 +383,7 @@ fun WorkoutSummaryCard(
                 Column {
                     Text(
                         text = workout.title,
-                        color = TextPrimary,
+                        color = White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -355,24 +391,25 @@ fun WorkoutSummaryCard(
                     val dateStr = workout.date.toString().substringBefore("T")
                     Text(
                         text = dateStr,
-                        color = TextMuted,
+                        color = Zinc500,
                         fontSize = 12.sp
                     )
                 }
             }
 
-            // Badge de series
+            // Badge de series con fuente monospace y borde
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .border(1.dp, Zinc700, RoundedCornerShape(8.dp))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = "${workout.sets.size} series",
-                    color = TextPrimary,
+                    color = White,
                     fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Medium
                 )
             }
