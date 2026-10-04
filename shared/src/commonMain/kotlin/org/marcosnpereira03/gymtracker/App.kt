@@ -1,35 +1,22 @@
 package org.marcosnpereira03.gymtracker
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import org.koin.compose.KoinApplication
+import org.marcosnpereira03.gymtracker.di.appModules
+import org.marcosnpereira03.gymtracker.presentation.navigation.AppNavigation
+import org.marcosnpereira03.gymtracker.presentation.theme.GymTrackerTheme
+
+/**
+ * Punto de entrada principal de Compose Multiplatform para Android e iOS.
+ * Inicializa el contexto de Koin con todos sus módulos y aplica el tema GymTrackerTheme.
+ */
 @Composable
 fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("¡Haz clic aquí!")
-            }
-            AnimatedVisibility(showContent) {
-                Text("GymTracker KMP")
-            }
+    KoinApplication(application = {
+        modules(appModules())
+    }) {
+        GymTrackerTheme {
+            AppNavigation()
         }
     }
 }
