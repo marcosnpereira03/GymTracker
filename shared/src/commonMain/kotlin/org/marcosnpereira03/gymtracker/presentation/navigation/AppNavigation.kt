@@ -2,14 +2,17 @@ package org.marcosnpereira03.gymtracker.presentation.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,47 +40,66 @@ fun AppNavigation() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = Zinc950,
         bottomBar = {
-            NavigationBar(
-                containerColor = DarkSurface,
-                tonalElevation = 8.dp,
-                modifier = Modifier.border(1.dp, DarkSurfaceBorder)
+            // Barra de navegación personalizada estilo Web App con contenedor pill activo
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Zinc950)
+                    .border(width = 1.dp, color = Zinc800)
+                    .padding(vertical = 8.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 bottomNavItems.forEach { item ->
-                    val isSelected = currentRoute == item.route || (item.route.startsWith("workout") && currentRoute?.startsWith("workout") == true)
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                    val isSelected = currentRoute == item.route || 
+                        (item.route.startsWith("workout") && currentRoute?.startsWith("workout") == true)
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .then(
+                                if (isSelected) {
+                                    Modifier
+                                        .background(Zinc900)
+                                        .border(1.dp, Zinc700, RoundedCornerShape(16.dp))
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                } else {
+                                    Modifier
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
+                            )
+                            .clickable {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = item.title,
-                                tint = if (isSelected) EmeraldPrimary else TextMuted
+                                tint = if (isSelected) Emerald400 else Zinc400,
+                                modifier = Modifier.size(20.dp)
                             )
-                        },
-                        label = {
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = item.title,
-                                color = if (isSelected) EmeraldPrimary else TextMuted
+                                color = if (isSelected) Emerald400 else Zinc400,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
                             )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = EmeraldPrimary.copy(alpha = 0.15f),
-                            selectedIconColor = EmeraldPrimary,
-                            selectedTextColor = EmeraldPrimary,
-                            unselectedIconColor = TextMuted,
-                            unselectedTextColor = TextMuted
-                        )
-                    )
+                        }
+                    }
                 }
             }
         }

@@ -155,6 +155,59 @@ class WorkoutSessionViewModel(
         }
     }
 
+    fun onAddSetToExercise(exerciseId: String) {
+        val currentSets = _uiState.value.sets
+        val exerciseSets = currentSets.filter { it.exerciseId == exerciseId }
+        val exerciseName = exerciseSets.firstOrNull()?.exerciseName 
+            ?: _uiState.value.availableExercises.firstOrNull { it.id == exerciseId }?.name 
+            ?: "Ejercicio"
+        
+        val lastSet = exerciseSets.lastOrNull()
+        val defaultWeight = lastSet?.weightText ?: "50"
+        val defaultReps = lastSet?.repsText ?: "10"
+        val defaultRir = lastSet?.rir ?: 1
+
+        val w = defaultWeight.toDoubleOrNull() ?: 0.0
+        val r = defaultReps.toIntOrNull() ?: 0
+        val oneRm = calculateOneRepMaxUseCase(w, r, defaultRir)
+
+        val newSet = EditableSet(
+            id = "s-${org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now().toEpochMilliseconds()}-${currentSets.size + 1}",
+            exerciseId = exerciseId,
+            exerciseName = exerciseName,
+            setNumber = exerciseSets.size + 1,
+            weightText = defaultWeight,
+            repsText = defaultReps,
+            rir = defaultRir,
+            estimated1Rm = oneRm
+        )
+
+        val updatedSets = currentSets + newSet
+        val volume = calculateTotalVolume(updatedSets)
+
+        _uiState.update {
+            it.copy(
+                sets = updatedSets,
+                totalVolumeKg = volume
+            )
+        }
+    }
+
+    fun onDeleteExercise(exerciseId: String) {
+        val updatedSets = _uiState.value.sets.filterNot { it.exerciseId == exerciseId }
+        val volume = calculateTotalVolume(updatedSets)
+        _uiState.update {
+            it.copy(
+                sets = updatedSets,
+                totalVolumeKg = volume
+            )
+        }
+    }
+
+    fun onResetSession() {
+        initSession(null)
+    }
+
     fun onUpdateSet(setId: String, weightText: String, repsText: String, rir: Int) {
         val updatedSets = _uiState.value.sets.map { set ->
             if (set.id == setId) {
