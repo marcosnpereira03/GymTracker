@@ -139,14 +139,23 @@ fun AppNavigation() {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
+                    },
+                    navArgument("date") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 )
             ) { backStackEntry ->
-                val workoutId = backStackEntry.arguments?.getString("workoutId")
+                val rawWorkoutId = backStackEntry.arguments?.getString("workoutId")
+                val rawDate = backStackEntry.arguments?.getString("date")
+                val workoutId = if (rawWorkoutId.isNullOrBlank() || rawWorkoutId == "{workoutId}") null else rawWorkoutId
+                val date = if (rawDate.isNullOrBlank() || rawDate == "{date}") null else rawDate
                 val viewModel = koinViewModel<WorkoutSessionViewModel>()
                 WorkoutSessionScreen(
                     viewModel = viewModel,
                     workoutId = workoutId,
+                    initialDate = date,
                     onNavigateBack = {
                         navController.popBackStack()
                     }
@@ -161,8 +170,8 @@ fun AppNavigation() {
                     onEditWorkout = { workoutId ->
                         navController.navigate(Screen.Workout.createRoute(workoutId))
                     },
-                    onNewWorkout = {
-                        navController.navigate(Screen.Workout.createRoute())
+                    onNewWorkout = { date ->
+                        navController.navigate(Screen.Workout.createRoute(date = date))
                     }
                 )
             }

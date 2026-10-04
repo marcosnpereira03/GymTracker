@@ -39,11 +39,14 @@ import org.marcosnpereira03.gymtracker.presentation.theme.*
 fun HistoryScreen(
     viewModel: HistoryViewModel,
     onEditWorkout: (String) -> Unit,
-    onNewWorkout: () -> Unit
+    onNewWorkout: (String?) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) } // 0 = Por Calendario, 1 = Por Ejercicio
-    var selectedDay by remember { mutableStateOf(2) } // Día seleccionado del mes
+    val today = remember { org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.today() }
+    var selectedDate by remember { mutableStateOf(today) }
+    var displayedYear by remember { mutableStateOf(today.year) }
+    var displayedMonth by remember { mutableStateOf(today.monthNumber) }
     var workoutToDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -157,26 +160,45 @@ fun HistoryScreen(
 
             if (selectedTab == 0) {
                 // ==========================================
-                // VISTA 1: POR CALENDARIO
+                // VISTA 1: POR CALENDARIO (DINÁMICO)
                 // ==========================================
-                val selectedDateStr = "2026-10-${if (selectedDay < 10) "0$selectedDay" else selectedDay}"
+                val selectedDateStr = selectedDate.toString()
                 val matchingWorkouts = state.workouts.filter {
                     it.workout.date.toString().substringBefore("T") == selectedDateStr
                 }
 
                 // Días del mes con entrenamientos registrados (para los puntitos verdes)
+                val monthPrefix = "${displayedYear}-${if (displayedMonth < 10) "0$displayedMonth" else "$displayedMonth"}-"
                 val daysWithWorkouts = state.workouts.mapNotNull {
                     val dStr = it.workout.date.toString().substringBefore("T")
-                    if (dStr.startsWith("2026-10-")) {
+                    if (dStr.startsWith(monthPrefix)) {
                         dStr.substringAfterLast("-").toIntOrNull()
                     } else null
-                }.toSet().ifEmpty { setOf(1, 2, 30) } // Default con días de muestra si está recién creado
+                }.toSet()
 
                 item {
                     CalendarCard(
-                        selectedDay = selectedDay,
+                        selectedDate = selectedDate,
+                        displayedYear = displayedYear,
+                        displayedMonth = displayedMonth,
                         daysWithWorkouts = daysWithWorkouts,
-                        onSelectDay = { selectedDay = it }
+                        onPreviousMonth = {
+                            if (displayedMonth == 1) {
+                                displayedMonth = 12
+                                displayedYear -= 1
+                            } else {
+                                displayedMonth -= 1
+                            }
+                        },
+                        onNextMonth = {
+                            if (displayedMonth == 12) {
+                                displayedMonth = 1
+                                displayedYear += 1
+                            } else {
+                                displayedMonth += 1
+                            }
+                        },
+                        onSelectDay = { date -> selectedDate = date }
                     )
                 }
 
@@ -251,7 +273,7 @@ fun HistoryScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 OutlinedButton(
-                                    onClick = onNewWorkout,
+                                    onClick = { onNewWorkout(selectedDateStr) },
                                     shape = RoundedCornerShape(10.dp),
                                     border = androidx.compose.foundation.BorderStroke(1.dp, Emerald400),
                                     colors = ButtonDefaults.outlinedButtonColors(
@@ -605,10 +627,33 @@ fun HistoryScreen(
 
 @Composable
 fun CalendarCard(
-    selectedDay: Int,
+    selectedDate: kotlinx.datetime.LocalDate,
+    displayedYear: Int,
+    displayedMonth: Int,
     daysWithWorkouts: Set<Int>,
-    onSelectDay: (Int) -> Unit
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onSelectDay: (kotlinx.datetime.LocalDate) -> Unit
 ) {
+    val monthNames = listOf(
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    )
+    val monthTitle = "${monthNames.getOrElse(displayedMonth - 1) { "Mes" }} De $displayedYear"
+
+    // Calcular días en el mes mostrado
+    val isLeap = (displayedYear % 4 == 0 && displayedYear % 100 != 0) || (displayedYear % 400 == 0)
+    val totalDays = when (displayedMonth) {
+        1, 3, 5, 7, 8, 10, 12 -> 31
+        4, 6, 9, 11 -> 30
+        2 -> if (isLeap) 29 else 28
+        else -> 31
+    }
+
+    val firstDayOfMonth = kotlinx.datetime.LocalDate(displayedYear, displayedMonth, 1)
+    val startOffset = firstDayOfMonth.dayOfWeek.ordinal // 0=LU, 1=MA, 2=MI, 3=JU, 4=VI, 5=SÁ, 6=DO
+    val rows = (totalDays + startOffset + 6) / 7
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -616,36 +661,48 @@ fun CalendarCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header del calendario (Mes + flechas)
+            // Header del calendario (Mes + flechas navegables)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Octubre De 2026",
+                    text = monthTitle,
                     color = White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Row {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Anterior",
-                        tint = Zinc400,
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .clickable { /* Mes anterior */ }
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Siguiente",
-                        tint = Zinc400,
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable(onClick = onPreviousMonth),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Mes anterior",
+                            tint = Zinc400,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .clickable { /* Mes siguiente */ }
-                    )
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable(onClick = onNextMonth),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Mes siguiente",
+                            tint = Zinc400,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
 
@@ -668,18 +725,16 @@ fun CalendarCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Grid de días del mes (Octubre 2026 empieza en Jueves = index 3)
-            val totalDays = 31
-            val startOffset = 3 // 0=LU, 1=MA, 2=MI, 3=JU
-            val rows = (totalDays + startOffset + 6) / 7
-
+            // Grid dinámico de días del mes
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (row in 0 until rows) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         for (col in 0 until 7) {
                             val dayNumber = (row * 7 + col) - startOffset + 1
                             if (dayNumber in 1..totalDays) {
-                                val isSelected = dayNumber == selectedDay
+                                val isSelected = selectedDate.year == displayedYear &&
+                                        selectedDate.monthNumber == displayedMonth &&
+                                        selectedDate.dayOfMonth == dayNumber
                                 val hasWorkout = dayNumber in daysWithWorkouts
 
                                 Box(
@@ -688,7 +743,9 @@ fun CalendarCard(
                                         .aspectRatio(1f)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(if (isSelected) White else Color.Transparent)
-                                        .clickable { onSelectDay(dayNumber) },
+                                        .clickable {
+                                            onSelectDay(kotlinx.datetime.LocalDate(displayedYear, displayedMonth, dayNumber))
+                                        },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(
@@ -707,7 +764,7 @@ fun CalendarCard(
                                                 modifier = Modifier
                                                     .size(4.dp)
                                                     .clip(CircleShape)
-                                                    .background(Emerald400)
+                                                    .background(if (isSelected) Emerald600 else Emerald400)
                                             )
                                         }
                                     }

@@ -39,6 +39,7 @@ import org.marcosnpereira03.gymtracker.presentation.theme.*
 fun WorkoutSessionScreen(
     viewModel: WorkoutSessionViewModel,
     workoutId: String? = null,
+    initialDate: String? = null,
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -47,9 +48,12 @@ fun WorkoutSessionScreen(
     val actualWorkoutId = remember(workoutId) {
         if (workoutId.isNullOrBlank() || workoutId == "{workoutId}") null else workoutId
     }
+    val actualDate = remember(initialDate) {
+        if (initialDate.isNullOrBlank() || initialDate == "{date}") null else initialDate
+    }
 
-    LaunchedEffect(actualWorkoutId) {
-        viewModel.initSession(actualWorkoutId)
+    LaunchedEffect(actualWorkoutId, actualDate) {
+        viewModel.initSession(actualWorkoutId, actualDate)
     }
 
     LaunchedEffect(state.isSavedSuccess) {
@@ -242,6 +246,46 @@ fun WorkoutSessionScreen(
                     }
                 }
 
+                // Error Banner si ocurre un problema de validación o red
+                if (state.errorMessage != null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Red500.copy(alpha = 0.15f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Red500.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("⚠️", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = state.errorMessage ?: "",
+                                        color = Red500,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { viewModel.onClearError() },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Text("✕", color = Red500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Notas de la sesión
                 item {
                     OutlinedTextField(
@@ -311,6 +355,7 @@ fun WorkoutSessionScreen(
                             sets = exerciseSets,
                             onAddSet = { viewModel.onAddSetToExercise(exerciseId) },
                             onUpdateSet = { sId, w, r, rir -> viewModel.onUpdateSet(sId, w, r, rir) },
+                            onToggleSetCompleted = { sId -> viewModel.onToggleSetCompleted(sId) },
                             onDeleteSet = { sId -> viewModel.onDeleteSet(sId) },
                             onDeleteExercise = { viewModel.onDeleteExercise(exerciseId) }
                         )
@@ -383,6 +428,7 @@ fun ExerciseWorkoutCard(
     sets: List<EditableSet>,
     onAddSet: () -> Unit,
     onUpdateSet: (setId: String, weight: String, reps: String, rir: Int) -> Unit,
+    onToggleSetCompleted: (setId: String) -> Unit,
     onDeleteSet: (setId: String) -> Unit,
     onDeleteExercise: () -> Unit
 ) {
@@ -486,6 +532,7 @@ fun ExerciseWorkoutCard(
                 CompactSetRow(
                     set = set,
                     onUpdate = { w, r, rir -> onUpdateSet(set.id, w, r, rir) },
+                    onToggleCompleted = { onToggleSetCompleted(set.id) },
                     onDelete = { onDeleteSet(set.id) }
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -517,16 +564,15 @@ fun ExerciseWorkoutCard(
 fun CompactSetRow(
     set: EditableSet,
     onUpdate: (weight: String, reps: String, rir: Int) -> Unit,
+    onToggleCompleted: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var isDone by remember { mutableStateOf(false) }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(Zinc950)
-            .border(1.dp, if (isDone) Emerald400.copy(alpha = 0.5f) else Zinc800, RoundedCornerShape(8.dp))
+            .border(1.dp, if (set.isCompleted) Emerald400.copy(alpha = 0.5f) else Zinc800, RoundedCornerShape(8.dp))
             .padding(horizontal = 6.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -629,7 +675,7 @@ fun CompactSetRow(
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Columna LISTO (Botón verde con checkmark + icono de basura)
+        // Columna LISTO (Botón verde si está lista, gris si está pendiente)
         Row(
             modifier = Modifier.weight(1.3f),
             horizontalArrangement = Arrangement.Center,
@@ -639,14 +685,19 @@ fun CompactSetRow(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(if (isDone) Emerald400 else Emerald500)
-                    .clickable { isDone = !isDone },
+                    .background(if (set.isCompleted) Emerald400 else Zinc800)
+                    .border(
+                        1.dp,
+                        if (set.isCompleted) Emerald500 else Zinc700,
+                        RoundedCornerShape(6.dp)
+                    )
+                    .clickable { onToggleCompleted() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Listo",
-                    tint = Color.Black,
+                    contentDescription = if (set.isCompleted) "Completada" else "Pendiente",
+                    tint = if (set.isCompleted) Color.Black else Zinc500,
                     modifier = Modifier.size(18.dp)
                 )
             }

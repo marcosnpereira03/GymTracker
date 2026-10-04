@@ -14,7 +14,8 @@ data class EditableSet(
     val weightText: String,
     val repsText: String,
     val rir: Int,
-    val estimated1Rm: Double = 0.0
+    val estimated1Rm: Double = 0.0,
+    val isCompleted: Boolean = false
 )
 
 /**

@@ -56,7 +56,7 @@ val useCaseModule = module {
  */
 val viewModelModule = module {
     viewModelOf(::HomeViewModel)
-    viewModelOf(::WorkoutSessionViewModel)
+    singleOf(::WorkoutSessionViewModel)
     viewModelOf(::HistoryViewModel)
     viewModelOf(::ExercisesViewModel)
     viewModelOf(::ProfileViewModel)
