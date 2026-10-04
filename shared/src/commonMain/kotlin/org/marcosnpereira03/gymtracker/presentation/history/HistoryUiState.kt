@@ -36,7 +36,7 @@ data class HistoryUiState(
     val selectedExerciseId: String? = null,
     val recordLimit: Int = 5,
     val exerciseRecords: List<ExerciseSessionRecord> = emptyList(),
-    val bestPrString: String = "45 kg × 15 reps",
+    val bestPrString: String? = null,
     val errorMessage: String? = null
 )
 

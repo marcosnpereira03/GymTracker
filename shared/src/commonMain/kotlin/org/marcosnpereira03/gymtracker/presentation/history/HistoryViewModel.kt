@@ -126,12 +126,11 @@ class HistoryViewModel(
         workouts: List<org.marcosnpereira03.gymtracker.domain.model.Workout>,
         exerciseId: String?,
         limit: Int
-    ): Pair<List<ExerciseSessionRecord>, String> {
-        if (exerciseId == null) return Pair(emptyList(), "0 kg × 0 reps")
+    ): Pair<List<ExerciseSessionRecord>, String?> {
+        if (exerciseId == null) return Pair(emptyList(), null)
 
         val matchedRecords = mutableListOf<ExerciseSessionRecord>()
-        var maxWeight = 0.0
-        var maxReps = 0
+        var bestSet: org.marcosnpereira03.gymtracker.domain.model.WorkoutSet? = null
 
         workouts.sortedByDescending { it.date }.forEach { workout ->
             val matchingSets = workout.sets.filter { it.exerciseId == exerciseId }
@@ -147,16 +146,25 @@ class HistoryViewModel(
                 )
 
                 matchingSets.forEach { set ->
-                    if (set.weightKg > maxWeight || (set.weightKg == maxWeight && set.reps > maxReps)) {
-                        maxWeight = set.weightKg
-                        maxReps = set.reps
+                    if (bestSet == null) {
+                        bestSet = set
+                    } else {
+                        val currentBest = bestSet!!
+                        if (set.weightKg > currentBest.weightKg ||
+                            (set.weightKg == currentBest.weightKg && set.reps > currentBest.reps)
+                        ) {
+                            bestSet = set
+                        }
                     }
                 }
             }
         }
 
         val limitedRecords = matchedRecords.take(limit)
-        val prDisplay = if (maxWeight > 0.0) "${maxWeight.toInt()} kg × $maxReps reps" else "45 kg × 15 reps"
+        val prDisplay = bestSet?.let {
+            val weightStr = if (it.weightKg % 1.0 == 0.0) "${it.weightKg.toInt()}" else "${it.weightKg}"
+            "$weightStr kg × ${it.reps} reps"
+        }
         return Pair(limitedRecords, prDisplay)
     }
 

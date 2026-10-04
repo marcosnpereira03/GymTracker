@@ -393,15 +393,17 @@ fun HistoryScreen(
                                         letterSpacing = 0.5.sp
                                     )
 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("🏅", fontSize = 15.sp)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "PR: ${state.bestPrString}",
-                                            color = Color(0xFFFBBF24), // Gold / Amber PR
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                    if (state.bestPrString != null) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("🏅", fontSize = 15.sp)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "PR: ${state.bestPrString}",
+                                                color = Color(0xFFFBBF24), // Gold / Amber PR
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
