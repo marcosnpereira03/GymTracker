@@ -44,8 +44,12 @@ fun WorkoutSessionScreen(
     val state by viewModel.uiState.collectAsState()
     var showExercisePicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(workoutId) {
-        viewModel.initSession(workoutId)
+    val actualWorkoutId = remember(workoutId) {
+        if (workoutId.isNullOrBlank() || workoutId == "{workoutId}") null else workoutId
+    }
+
+    LaunchedEffect(actualWorkoutId) {
+        viewModel.initSession(actualWorkoutId)
     }
 
     LaunchedEffect(state.isSavedSuccess) {
@@ -87,7 +91,7 @@ fun WorkoutSessionScreen(
                             Text("💾", fontSize = 16.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (workoutId != null) "Guardar Cambios del Entrenamiento" else "Finalizar y Guardar el entrenamiento",
+                                text = if (actualWorkoutId != null) "Guardar Cambios del Entrenamiento" else "Finalizar y Guardar el entrenamiento",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -118,7 +122,7 @@ fun WorkoutSessionScreen(
                 // Header superior: Modo y Fecha
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        if (workoutId != null) {
+                        if (actualWorkoutId != null) {
                             // MODO EDICIÓN
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -203,7 +207,7 @@ fun WorkoutSessionScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (workoutId != null) state.title else "Entrenamiento Diario",
+                                text = if (actualWorkoutId != null) state.title else "Entrenamiento Diario",
                                 color = White,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,

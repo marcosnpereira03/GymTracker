@@ -3,6 +3,9 @@ package org.marcosnpereira03.gymtracker.presentation.history
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,9 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.marcosnpereira03.gymtracker.presentation.theme.*
@@ -39,9 +44,32 @@ fun HistoryScreen(
     val state by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) } // 0 = Por Calendario, 1 = Por Ejercicio
     var selectedDay by remember { mutableStateOf(2) } // Día seleccionado del mes
+    var workoutToDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadHistory()
+    }
+
+    if (workoutToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { workoutToDelete = null },
+            title = { Text("Eliminar entrenamiento", color = White) },
+            text = { Text("¿Deseas eliminar '${workoutToDelete?.second}' del historial?", color = Zinc400) },
+            confirmButton = {
+                TextButton(onClick = {
+                    workoutToDelete?.first?.let { viewModel.onDeleteWorkout(it) }
+                    workoutToDelete = null
+                }) {
+                    Text("Eliminar", color = Red500, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { workoutToDelete = null }) {
+                    Text("Cancelar", color = Zinc400)
+                }
+            },
+            containerColor = Zinc900
+        )
     }
 
     Scaffold(
@@ -268,7 +296,7 @@ fun HistoryScreen(
                         val selectedExerciseLabel = if (selectedExercise != null) {
                             "${selectedExercise.name.uppercase()} (${selectedExercise.muscleGroup})"
                         } else {
-                            "ABDUCTORES EN MÁQUINA (Pierna)"
+                            "APERTURAS EN POLEA (Pecho)"
                         }
 
                         Box(
@@ -276,7 +304,7 @@ fun HistoryScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(Zinc900)
-                                .border(1.dp, if (dropdownExpanded) Emerald400 else Zinc800, RoundedCornerShape(10.dp))
+                                .border(1.dp, Emerald400, RoundedCornerShape(10.dp))
                                 .clickable { dropdownExpanded = true }
                                 .padding(horizontal = 14.dp, vertical = 12.dp)
                         ) {
@@ -289,7 +317,10 @@ fun HistoryScreen(
                                     text = selectedExerciseLabel,
                                     color = White,
                                     fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).padding(end = 8.dp)
                                 )
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowDown,
@@ -323,7 +354,7 @@ fun HistoryScreen(
                                             dropdownExpanded = false
                                         },
                                         modifier = Modifier.background(
-                                            if (isCurrentSelected) Color(0xFF1E3A8A).copy(alpha = 0.4f) else Color.Transparent
+                                            if (isCurrentSelected) Color(0xFF064E3B).copy(alpha = 0.5f) else Color.Transparent
                                         )
                                     )
                                 }
@@ -344,14 +375,16 @@ fun HistoryScreen(
                             colors = CardDefaults.cardColors(containerColor = Zinc900),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(16.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
                                         text = activeExercise.muscleGroup.uppercase(),
                                         color = Emerald400,
@@ -359,25 +392,25 @@ fun HistoryScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = activeExercise.name.uppercase(),
-                                        color = White,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("🏅", fontSize = 16.sp)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "PR: ${state.bestPrString}",
-                                        color = Color(0xFFFBBF24), // Gold / Amber PR
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("🏅", fontSize = 15.sp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "PR: ${state.bestPrString}",
+                                            color = Color(0xFFFBBF24), // Gold / Amber PR
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = activeExercise.name.uppercase(),
+                                    color = White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
@@ -456,30 +489,54 @@ fun HistoryScreen(
                             border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
-                                // Header: Fecha • Título + Botones Editar / Borrar
+                                // Header: Fecha • Título (con elipsis para no superponerse) + Botones Editar (azul) / Borrar (rojo)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.DateRange, contentDescription = null, tint = Zinc400, modifier = Modifier.size(14.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DateRange,
+                                            contentDescription = null,
+                                            tint = Zinc400,
+                                            modifier = Modifier.size(14.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "${record.workoutDate} • ${record.workoutTitle}",
+                                            text = "${record.workoutDate}  •  ${record.workoutTitle}",
                                             color = White,
                                             fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        IconButton(onClick = { onEditWorkout(record.workoutId) }, modifier = Modifier.size(24.dp)) {
-                                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Zinc400, modifier = Modifier.size(14.dp))
-                                        }
-                                        IconButton(onClick = { viewModel.onDeleteWorkout(record.workoutId) }, modifier = Modifier.size(24.dp)) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Borrar", tint = Zinc500, modifier = Modifier.size(14.dp))
-                                        }
+                                    Row(
+                                        modifier = Modifier.wrapContentWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        HoverableActionIcon(
+                                            icon = Icons.Default.Edit,
+                                            contentDescription = "Editar",
+                                            defaultTint = Zinc400,
+                                            hoverTint = Color(0xFF60A5FA), // Blue hover
+                                            onClick = { onEditWorkout(record.workoutId) }
+                                        )
+                                        HoverableActionIcon(
+                                            icon = Icons.Default.Delete,
+                                            contentDescription = "Eliminar",
+                                            defaultTint = Zinc400,
+                                            hoverTint = Red500, // Red hover
+                                            onClick = { workoutToDelete = Pair(record.workoutId, record.workoutTitle) }
+                                        )
                                     }
                                 }
 
@@ -509,8 +566,9 @@ fun HistoryScreen(
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
+                                            Spacer(modifier = Modifier.width(6.dp))
                                             Text(
-                                                text = "  ×  ${set.reps} reps",
+                                                text = "×  ${set.reps} reps",
                                                 color = White,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold
@@ -676,13 +734,13 @@ fun CalendarWorkoutCard(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("Eliminar entrenamiento", color = White) },
-            text = { Text("¿Deseas eliminar '${detail.workout.title}'?", color = Zinc400) },
+            text = { Text("¿Deseas eliminar '${detail.workout.title}' del historial?", color = Zinc400) },
             confirmButton = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteConfirm = false
                 }) {
-                    Text("Eliminar", color = Red500)
+                    Text("Eliminar", color = Red500, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -707,7 +765,11 @@ fun CalendarWorkoutCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
                     Text(
                         text = "SESIÓN GUARDADA",
                         color = Emerald400,
@@ -720,44 +782,65 @@ fun CalendarWorkoutCard(
                         text = detail.workout.title,
                         color = White,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Botón Editar estilo Pill
+                Row(
+                    modifier = Modifier.wrapContentWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Botón Editar estilo Pill con hover azul
+                    val editInteractionSource = remember { MutableInteractionSource() }
+                    val isEditHovered by editInteractionSource.collectIsHoveredAsState()
+                    val isEditPressed by editInteractionSource.collectIsPressedAsState()
+                    val isEditActive = isEditHovered || isEditPressed
+
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Zinc800)
-                            .border(1.dp, Zinc700, RoundedCornerShape(8.dp))
-                            .clickable { onEdit() }
+                            .background(if (isEditActive) Color(0xFF1E3A8A).copy(alpha = 0.4f) else Zinc800)
+                            .border(1.dp, if (isEditActive) Color(0xFF60A5FA) else Zinc700, RoundedCornerShape(8.dp))
+                            .clickable(
+                                interactionSource = editInteractionSource,
+                                indication = null,
+                                onClick = onEdit
+                            )
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Zinc400, modifier = Modifier.size(13.dp))
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = if (isEditActive) Color(0xFF60A5FA) else Zinc400,
+                            modifier = Modifier.size(13.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Editar", color = White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Editar",
+                            color = if (isEditActive) Color(0xFF60A5FA) else White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
-                    // Botón Eliminar
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Zinc800)
-                            .border(1.dp, Zinc700, RoundedCornerShape(8.dp))
-                            .clickable { showDeleteConfirm = true }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Zinc400, modifier = Modifier.size(14.dp))
-                    }
+                    // Botón Eliminar con hover rojo
+                    HoverableActionIcon(
+                        icon = Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        defaultTint = Zinc400,
+                        hoverTint = Red500,
+                        onClick = { showDeleteConfirm = true }
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Detalle de ejercicios y series (estilo idéntico a captura 2: CURL FEMORAL TUMBADO BÍCEPS)
+            // Detalle de ejercicios y series (estilo idéntico a captura: CURL FEMORAL TUMBADO BÍCEPS)
             val exerciseMap = availableExercises.associateBy { it.id }
             detail.workout.sets.groupBy { it.exerciseId }.forEach { (exerciseId, sets) ->
                 val exObj = exerciseMap[exerciseId]
@@ -838,6 +921,40 @@ fun CalendarWorkoutCard(
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
+    }
+}
+
+@Composable
+fun HoverableActionIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    defaultTint: Color = Zinc400,
+    hoverTint: Color,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val isActive = isHovered || isPressed
+
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isActive) hoverTint.copy(alpha = 0.15f) else Color.Transparent)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (isActive) hoverTint else defaultTint,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 

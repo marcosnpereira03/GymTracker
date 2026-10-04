@@ -17,7 +17,7 @@ sealed class BottomNavItem(
     val icon: ImageVector
 ) {
     object Home : BottomNavItem(Screen.Home.route, "Hoy", Icons.Default.Home)
-    object Workout : BottomNavItem(Screen.Workout.route, "Entrenar", Icons.Default.PlayArrow)
+    object Workout : BottomNavItem(Screen.Workout.createRoute(), "Entrenar", Icons.Default.PlayArrow)
     object History : BottomNavItem(Screen.History.route, "Historial", Icons.Default.DateRange)
     object Exercises : BottomNavItem(Screen.Exercises.route, "Ejercicios", Icons.Default.List)
     object Profile : BottomNavItem(Screen.Profile.route, "Pesajes", Icons.Default.Person)
