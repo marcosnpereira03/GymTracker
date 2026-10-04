@@ -5,9 +5,9 @@ compose-plugin = "1.12.1"
 androidx-activityCompose = "1.13.0"
 androidx-lifecycle = "2.11.0"
 androidx-navigation = "2.9.2"
-android-compileSdk = "35"
+android-compileSdk = "37"
 android-minSdk = "24"
-android-targetSdk = "35"
+android-targetSdk = "37"
 
 # Red, Serialización y Supabase
 ktor = "3.6.0"
@@ -57,4 +57,5 @@ androidLibrary = { id = "com.android.library", version.ref = "agp" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
