@@ -11,9 +11,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -126,10 +128,26 @@ fun HistoryScreen(
             }
 
             if (selectedTab == 0) {
-                // Widget de Calendario Mensual
+                // ==========================================
+                // VISTA 1: POR CALENDARIO
+                // ==========================================
+                val selectedDateStr = "2026-10-${if (selectedDay < 10) "0$selectedDay" else selectedDay}"
+                val matchingWorkouts = state.workouts.filter {
+                    it.workout.date.toString().substringBefore("T") == selectedDateStr
+                }
+
+                // Días del mes con entrenamientos registrados (para los puntitos verdes)
+                val daysWithWorkouts = state.workouts.mapNotNull {
+                    val dStr = it.workout.date.toString().substringBefore("T")
+                    if (dStr.startsWith("2026-10-")) {
+                        dStr.substringAfterLast("-").toIntOrNull()
+                    } else null
+                }.toSet().ifEmpty { setOf(1, 2, 30) } // Default con días de muestra si está recién creado
+
                 item {
                     CalendarCard(
                         selectedDay = selectedDay,
+                        daysWithWorkouts = daysWithWorkouts,
                         onSelectDay = { selectedDay = it }
                     )
                 }
@@ -142,90 +160,383 @@ fun HistoryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "SESIÓN DEL 2026-10-${if (selectedDay < 10) "0$selectedDay" else selectedDay}",
+                            text = "SESIÓN DEL $selectedDateStr",
                             color = Zinc400,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
-                        Text(
-                            text = if (state.filteredWorkouts.isNotEmpty()) "1 entrenamiento" else "0 entrenamientos",
-                            color = Emerald400,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                // Lista de entrenamientos del día
-                if (state.isLoading && state.workouts.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 30.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = Emerald400)
-                        }
-                    }
-                } else if (state.filteredWorkouts.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Zinc900)
-                                .border(1.dp, Zinc800, RoundedCornerShape(14.dp))
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        if (matchingWorkouts.isNotEmpty()) {
                             Text(
-                                text = "No hay sesiones registradas en esta fecha.",
-                                color = Zinc500,
-                                fontSize = 13.sp
+                                text = "${matchingWorkouts.size} entrenamiento${if (matchingWorkouts.size > 1) "s" else ""}",
+                                color = Emerald400,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
+                }
+
+                // Lista de entrenamientos o Empty State si no hay entrenamientos
+                if (matchingWorkouts.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Zinc900.copy(alpha = 0.5f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Zinc800),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DateRange,
+                                        contentDescription = null,
+                                        tint = Zinc400,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Text(
+                                    text = "Sin entrenamientos registrados el $selectedDateStr",
+                                    color = White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "¿Entrenaste este día y no lo anotaste?",
+                                    color = Zinc400,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                OutlinedButton(
+                                    onClick = onNewWorkout,
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Emerald400),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = Emerald400
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Anotar entrenamiento en esta fecha", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
                 } else {
-                    items(items = state.filteredWorkouts, key = { it.workout.id }) { item ->
+                    items(items = matchingWorkouts, key = { it.workout.id }) { item ->
                         CalendarWorkoutCard(
                             detail = item,
+                            availableExercises = state.availableExercises,
                             onEdit = { onEditWorkout(item.workout.id) },
                             onDelete = { viewModel.onDeleteWorkout(item.workout.id) }
                         )
                     }
                 }
             } else {
-                // Tab "Por Ejercicio": Buscador y lista
+                // ==========================================
+                // VISTA 2: POR EJERCICIO (CON DROPDOWN SELECTOR)
+                // ==========================================
                 item {
-                    OutlinedTextField(
-                        value = state.searchQuery,
-                        onValueChange = { viewModel.onSearchQueryChange(it) },
-                        placeholder = { Text("Buscar por ejercicio...", color = Zinc500, fontSize = 14.sp) },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null, tint = Zinc500)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = White,
-                            unfocusedTextColor = White,
-                            focusedBorderColor = Emerald400,
-                            unfocusedBorderColor = Zinc800,
-                            focusedContainerColor = Zinc900,
-                            unfocusedContainerColor = Zinc900
-                        ),
-                        singleLine = true
-                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Seleccionar Ejercicio",
+                            color = Zinc400,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        var dropdownExpanded by remember { mutableStateOf(false) }
+                        val selectedExercise = state.availableExercises.firstOrNull { it.id == state.selectedExerciseId }
+                            ?: state.availableExercises.firstOrNull()
+
+                        val selectedExerciseLabel = if (selectedExercise != null) {
+                            "${selectedExercise.name.uppercase()} (${selectedExercise.muscleGroup})"
+                        } else {
+                            "ABDUCTORES EN MÁQUINA (Pierna)"
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Zinc900)
+                                .border(1.dp, if (dropdownExpanded) Emerald400 else Zinc800, RoundedCornerShape(10.dp))
+                                .clickable { dropdownExpanded = true }
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = selectedExerciseLabel,
+                                    color = White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Desplegar lista de ejercicios",
+                                    tint = Zinc400,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = dropdownExpanded,
+                                onDismissRequest = { dropdownExpanded = false },
+                                modifier = Modifier
+                                    .fillMaxWidth(0.9f)
+                                    .background(Zinc900)
+                                    .border(1.dp, Zinc800, RoundedCornerShape(8.dp))
+                            ) {
+                                state.availableExercises.forEach { exercise ->
+                                    val isCurrentSelected = exercise.id == state.selectedExerciseId
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = "${exercise.name.uppercase()} (${exercise.muscleGroup})",
+                                                color = if (isCurrentSelected) Emerald400 else White,
+                                                fontSize = 13.sp,
+                                                fontWeight = if (isCurrentSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.onSelectExercise(exercise.id)
+                                            dropdownExpanded = false
+                                        },
+                                        modifier = Modifier.background(
+                                            if (isCurrentSelected) Color(0xFF1E3A8A).copy(alpha = 0.4f) else Color.Transparent
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
-                items(items = state.filteredWorkouts, key = { it.workout.id }) { item ->
-                    CalendarWorkoutCard(
-                        detail = item,
-                        onEdit = { onEditWorkout(item.workout.id) },
-                        onDelete = { viewModel.onDeleteWorkout(item.workout.id) }
-                    )
+                // Tarjeta resumen del Ejercicio seleccionado + PR
+                val activeExercise = state.availableExercises.firstOrNull { it.id == state.selectedExerciseId }
+                    ?: state.availableExercises.firstOrNull()
+
+                if (activeExercise != null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Zinc900),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = activeExercise.muscleGroup.uppercase(),
+                                        color = Emerald400,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = activeExercise.name.uppercase(),
+                                        color = White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🏅", fontSize = 16.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "PR: ${state.bestPrString}",
+                                        color = Color(0xFFFBBF24), // Gold / Amber PR
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Filtro de Registros Históricos: [ 5 ] [ 10 ] [ 30 ]
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "REGISTROS HISTÓRICOS",
+                            color = Zinc400,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Zinc900)
+                                .border(1.dp, Zinc800, RoundedCornerShape(8.dp))
+                                .padding(2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            listOf(5, 10, 30).forEach { count ->
+                                val isSelected = state.recordLimit == count
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isSelected) Emerald400 else Color.Transparent)
+                                        .clickable { viewModel.onSelectRecordLimit(count) }
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "$count",
+                                        color = if (isSelected) Color.Black else Zinc400,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Lista de Registros Históricos del ejercicio
+                if (state.exerciseRecords.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Zinc900)
+                                .border(1.dp, Zinc800, RoundedCornerShape(12.dp))
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Sin registros para este ejercicio.",
+                                color = Zinc500,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                } else {
+                    items(items = state.exerciseRecords, key = { "${it.workoutId}-${it.workoutDate}" }) { record ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Zinc900),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                // Header: Fecha • Título + Botones Editar / Borrar
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.DateRange, contentDescription = null, tint = Zinc400, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "${record.workoutDate} • ${record.workoutTitle}",
+                                            color = White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        IconButton(onClick = { onEditWorkout(record.workoutId) }, modifier = Modifier.size(24.dp)) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Zinc400, modifier = Modifier.size(14.dp))
+                                        }
+                                        IconButton(onClick = { viewModel.onDeleteWorkout(record.workoutId) }, modifier = Modifier.size(24.dp)) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Borrar", tint = Zinc500, modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Series registradas
+                                record.sets.forEach { set ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Zinc950)
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Serie #${set.setNumber}",
+                                            color = Zinc400,
+                                            fontSize = 12.sp
+                                        )
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "${set.weightKg.toInt()} kg",
+                                                color = Emerald400,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "  ×  ${set.reps} reps",
+                                                color = White,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(Zinc800)
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "RIR ${set.rir}",
+                                                    color = if (set.rir == 0) Red500 else Zinc400,
+                                                    fontSize = 11.sp,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -235,6 +546,7 @@ fun HistoryScreen(
 @Composable
 fun CalendarCard(
     selectedDay: Int,
+    daysWithWorkouts: Set<Int>,
     onSelectDay: (Int) -> Unit
 ) {
     Card(
@@ -308,7 +620,7 @@ fun CalendarCard(
                             val dayNumber = (row * 7 + col) - startOffset + 1
                             if (dayNumber in 1..totalDays) {
                                 val isSelected = dayNumber == selectedDay
-                                val hasWorkout = dayNumber in listOf(1, 2) // Días con entreno registrado
+                                val hasWorkout = dayNumber in daysWithWorkouts
 
                                 Box(
                                     modifier = Modifier
@@ -354,6 +666,7 @@ fun CalendarCard(
 @Composable
 fun CalendarWorkoutCard(
     detail: WorkoutHistoryDetail,
+    availableExercises: List<org.marcosnpereira03.gymtracker.domain.model.Exercise>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -444,8 +757,13 @@ fun CalendarWorkoutCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Detalle de ejercicios y series (estilo idéntico a captura 3: CURL FEMORAL TUMBADO BÍCEPS)
+            // Detalle de ejercicios y series (estilo idéntico a captura 2: CURL FEMORAL TUMBADO BÍCEPS)
+            val exerciseMap = availableExercises.associateBy { it.id }
             detail.workout.sets.groupBy { it.exerciseId }.forEach { (exerciseId, sets) ->
+                val exObj = exerciseMap[exerciseId]
+                val exName = exObj?.name ?: "EJERCICIO"
+                val exMuscle = exObj?.muscleGroup ?: "MÚSCULO"
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -461,13 +779,13 @@ fun CalendarWorkoutCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "EJERCICIO REGISTRADO",
+                                text = exName.uppercase(),
                                 color = White,
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "DETALLE",
+                                text = exMuscle.uppercase(),
                                 color = Zinc400,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -506,7 +824,7 @@ fun CalendarWorkoutCard(
                                     ) {
                                         Text(
                                             text = "RIR ${set.rir}",
-                                            color = Zinc400,
+                                            color = if (set.rir == 0) Red500 else Zinc400,
                                             fontSize = 11.sp,
                                             fontFamily = FontFamily.Monospace,
                                             fontWeight = FontWeight.Medium
@@ -522,4 +840,5 @@ fun CalendarWorkoutCard(
         }
     }
 }
+
 
