@@ -33,5 +33,35 @@ object DateTimeUtil {
             now()
         }
     }
+
+    fun formatHeaderDate(instant: Instant = now()): String {
+        val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        val dayName = when (dt.dayOfWeek.name) {
+            "MONDAY" -> "Lunes"
+            "TUESDAY" -> "Martes"
+            "WEDNESDAY" -> "Miércoles"
+            "THURSDAY" -> "Jueves"
+            "FRIDAY" -> "Viernes"
+            "SATURDAY" -> "Sábado"
+            "SUNDAY" -> "Domingo"
+            else -> "Hoy"
+        }
+        val monthName = when (dt.month.name) {
+            "JANUARY" -> "Enero"
+            "FEBRUARY" -> "Febrero"
+            "MARCH" -> "Marzo"
+            "APRIL" -> "Abril"
+            "MAY" -> "Mayo"
+            "JUNE" -> "Junio"
+            "JULY" -> "Julio"
+            "AUGUST" -> "Agosto"
+            "SEPTEMBER" -> "Septiembre"
+            "OCTOBER" -> "Octubre"
+            "NOVEMBER" -> "Noviembre"
+            "DECEMBER" -> "Diciembre"
+            else -> ""
+        }
+        return "$dayName, ${dt.day} De $monthName"
+    }
 }
 

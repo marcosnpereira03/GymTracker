@@ -1,5 +1,6 @@
 package org.marcosnpereira03.gymtracker.presentation.home
 
+import org.marcosnpereira03.gymtracker.domain.model.AuthUser
 import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 
@@ -8,9 +9,11 @@ import org.marcosnpereira03.gymtracker.domain.model.Workout
  */
 data class HomeUiState(
     val isLoading: Boolean = false,
+    val currentUser: AuthUser? = null,
     val latestWorkout: Workout? = null,
     val latestWeight: BodyWeightLog? = null,
     val recentWorkouts: List<Workout> = emptyList(),
     val totalVolumeLatestWorkout: Double = 0.0,
     val errorMessage: String? = null
 )
+

@@ -9,9 +9,11 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
 import org.marcosnpereira03.gymtracker.data.remote.SupabaseClientFactory
+import org.marcosnpereira03.gymtracker.data.repository.AuthRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.ExerciseRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.ProfileRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.WorkoutRepositoryImpl
+import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
@@ -19,6 +21,7 @@ import org.marcosnpereira03.gymtracker.domain.usecase.CalculateMuscleGroupVolume
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateOneRepMaxUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.GetExerciseHistoryUseCase
+import org.marcosnpereira03.gymtracker.presentation.auth.AuthViewModel
 import org.marcosnpereira03.gymtracker.presentation.exercises.ExercisesViewModel
 import org.marcosnpereira03.gymtracker.presentation.history.HistoryViewModel
 import org.marcosnpereira03.gymtracker.presentation.home.HomeViewModel
@@ -36,6 +39,7 @@ val networkModule = module {
  * Módulo de repositorios (enlaza interfaces del dominio con implementaciones de datos).
  */
 val repositoryModule = module {
+    singleOf(::AuthRepositoryImpl) { bind<AuthRepository>() }
     singleOf(::ExerciseRepositoryImpl) { bind<ExerciseRepository>() }
     singleOf(::WorkoutRepositoryImpl) { bind<WorkoutRepository>() }
     singleOf(::ProfileRepositoryImpl) { bind<ProfileRepository>() }
@@ -55,6 +59,7 @@ val useCaseModule = module {
  * Módulo de ViewModels para la capa de presentación.
  */
 val viewModelModule = module {
+    viewModelOf(::AuthViewModel)
     viewModelOf(::HomeViewModel)
     singleOf(::WorkoutSessionViewModel)
     viewModelOf(::HistoryViewModel)
