@@ -13,6 +13,8 @@ import kotlinx.coroutines.launch
 import org.marcosnpereira03.gymtracker.domain.model.AuthUser
 import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
 
+import org.marcosnpereira03.gymtracker.domain.repository.SignUpResult
+
 /**
  * Implementación de AuthRepository utilizando supabase-kt Auth.
  */
@@ -47,9 +49,15 @@ class AuthRepositoryImpl(
     override suspend fun checkCurrentSession(): AuthUser? {
         return runCatching {
             val user = supabaseClient.auth.currentUserOrNull()
-            val authUser = user?.let { AuthUser(id = it.id, email = it.email) }
-            _currentUser.value = authUser
-            authUser
+            val session = supabaseClient.auth.currentSessionOrNull()
+            if (session != null && user != null) {
+                val authUser = AuthUser(id = user.id, email = user.email)
+                _currentUser.value = authUser
+                authUser
+            } else {
+                _currentUser.value = null
+                null
+            }
         }.getOrNull()
     }
 
@@ -67,19 +75,22 @@ class AuthRepositoryImpl(
         }
     }
 
-    override suspend fun signUp(email: String, password: String): Result<AuthUser> {
+    override suspend fun signUp(email: String, password: String): Result<SignUpResult> {
         return runCatching {
             supabaseClient.auth.signUpWith(Email) {
                 this.email = email.trim()
                 this.password = password
             }
+            val session = supabaseClient.auth.currentSessionOrNull()
             val user = supabaseClient.auth.currentUserOrNull()
-            val authUser = AuthUser(
-                id = user?.id ?: "registered-${email.trim()}",
-                email = user?.email ?: email.trim()
-            )
-            _currentUser.value = authUser
-            authUser
+            if (session != null && user != null) {
+                val authUser = AuthUser(id = user.id, email = user.email)
+                _currentUser.value = authUser
+                SignUpResult.Authenticated(authUser)
+            } else {
+                _currentUser.value = null
+                SignUpResult.RequiresEmailConfirmation(email.trim())
+            }
         }
     }
 

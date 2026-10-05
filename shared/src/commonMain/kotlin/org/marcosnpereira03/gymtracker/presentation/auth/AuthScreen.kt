@@ -126,21 +126,54 @@ fun AuthScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Mensajes de error o éxito
+                // Mensaje de éxito o instrucción de verificación
+                if (state.successMessage != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = Emerald400.copy(alpha = 0.15f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Emerald400.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("✉️", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = state.successMessage ?: "",
+                                color = Emerald400,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
+                // Mensajes de error
                 if (state.errorMessage != null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = Red500.copy(alpha = 0.15f)),
+                        colors = CardDefaults.cardColors(containerColor = Red500.copy(alpha = 0.12f)),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Red500.copy(alpha = 0.4f))
                     ) {
-                        Text(
-                            text = state.errorMessage ?: "",
-                            color = Red500,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("⚠️", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = state.errorMessage ?: "",
+                                color = Red500,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                 }
