@@ -28,12 +28,16 @@ import androidx.compose.ui.unit.sp
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 
+import androidx.compose.material.icons.automirrored.filled.Login
+import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onStartWorkout: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToAuth: () -> Unit,
     onWorkoutClick: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -41,7 +45,7 @@ fun HomeScreen(
     Scaffold(
         containerColor = Zinc950
     ) { paddingValues ->
-        if (state.isLoading && state.recentWorkouts.isEmpty()) {
+        if (state.isLoading && state.recentWorkouts.isEmpty() && state.currentUser != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -59,7 +63,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
             ) {
-                // Header (GYM TRACKER + Fecha + Botón Salir)
+                // Header (GYM TRACKER + Fecha + Botón Ingresar / Salir)
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
@@ -76,35 +80,62 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Domingo, 4 De Octubre",
+                                text = DateTimeUtil.formatHeaderDate(),
                                 color = White,
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold
                             )
 
-                            // Botón Salir estilo pill
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Zinc900)
-                                    .border(1.dp, Zinc700, RoundedCornerShape(10.dp))
-                                    .clickable { /* Salir / Ajustes */ }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                                    contentDescription = "Salir",
-                                    tint = Zinc400,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Salir",
-                                    color = Zinc400,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                            if (state.currentUser == null) {
+                                // Botón Ingresar estilo pill interactivo
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(Emerald950.copy(alpha = 0.5f))
+                                        .border(1.dp, Emerald500.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                                        .clickable { onNavigateToAuth() }
+                                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Login,
+                                        contentDescription = "Ingresar",
+                                        tint = Emerald400,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Ingresar",
+                                        color = Emerald400,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else {
+                                // Botón Salir estilo pill
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Zinc900)
+                                        .border(1.dp, Zinc700, RoundedCornerShape(10.dp))
+                                        .clickable { viewModel.onSignOut() }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                        contentDescription = "Salir",
+                                        tint = Zinc400,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Salir",
+                                        color = Zinc400,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }
@@ -132,8 +163,13 @@ fun HomeScreen(
                                     .padding(horizontal = 10.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val greetingText = if (state.currentUser != null) {
+                                    "👋 Hola ${state.currentUser?.email?.substringBefore('@') ?: "Usuario"}"
+                                } else {
+                                    "👋 Bienvenido"
+                                }
                                 Text(
-                                    text = "👋 Hola marcosnpereira03",
+                                    text = greetingText,
                                     color = White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
@@ -216,10 +252,10 @@ fun HomeScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                val weightVal = state.latestWeight?.weightKg ?: 88.0
+                                val weightVal = state.latestWeight?.weightKg ?: 87.6
                                 Row(verticalAlignment = Alignment.Bottom) {
                                     Text(
-                                        text = "${weightVal.toInt()}",
+                                        text = "$weightVal",
                                         color = White,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold
@@ -309,8 +345,31 @@ fun HomeScreen(
                     }
                 }
 
-                // Lista del último entrenamiento
-                if (state.recentWorkouts.isEmpty()) {
+                // Lista del último entrenamiento según estado de autenticación
+                if (state.currentUser == null) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Inicia sesión para ver tu historial de entrenamientos guardados.",
+                                    color = Zinc400,
+                                    fontSize = 13.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else if (state.recentWorkouts.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier

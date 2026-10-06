@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
@@ -17,6 +18,7 @@ import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseC
 class HomeViewModel(
     private val workoutRepository: WorkoutRepository,
     private val profileRepository: ProfileRepository,
+    private val authRepository: AuthRepository,
     private val calculateWorkoutVolumeUseCase: CalculateWorkoutVolumeUseCase
 ) : ViewModel() {
 
@@ -24,7 +26,13 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        loadDashboardData()
+        viewModelScope.launch {
+            authRepository.checkCurrentSession()
+            authRepository.currentUser.collect { user ->
+                _uiState.update { it.copy(currentUser = user) }
+                loadDashboardData()
+            }
+        }
     }
 
     fun loadDashboardData() {
@@ -60,4 +68,12 @@ class HomeViewModel(
             }
         }
     }
+
+    fun onSignOut() {
+        viewModelScope.launch {
+            authRepository.signOut()
+            loadDashboardData()
+        }
+    }
 }
+
