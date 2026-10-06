@@ -206,11 +206,17 @@ fun AppNavigation() {
                 )
             }
 
-            // 5. Pantalla Pesajes & Analíticas (Profile)
+            // 5. Pantalla Perfil, Estadísticas y Pesajes
             composable(Screen.Profile.route) {
                 val viewModel = koinViewModel<ProfileViewModel>()
                 ProfileScreen(
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onNavigateToWorkout = {
+                        navController.navigate(Screen.Workout.createRoute())
+                    },
+                    onNavigateToAuth = {
+                        navController.navigate(Screen.Auth.route)
+                    }
                 )
             }
         }

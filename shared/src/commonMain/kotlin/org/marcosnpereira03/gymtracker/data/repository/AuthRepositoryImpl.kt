@@ -4,15 +4,19 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.marcosnpereira03.gymtracker.domain.model.AuthUser
 import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
-
 import org.marcosnpereira03.gymtracker.domain.repository.SignUpResult
 
 /**
@@ -27,6 +31,17 @@ class AuthRepositoryImpl(
 
     private val scope = CoroutineScope(Dispatchers.Default)
 
+    private fun mapToAuthUser(user: UserInfo): AuthUser {
+        val username = user.userMetadata?.get("username")?.jsonPrimitive?.contentOrNull
+        val avatarUrl = user.userMetadata?.get("avatar_url")?.jsonPrimitive?.contentOrNull
+        return AuthUser(
+            id = user.id,
+            email = user.email,
+            username = username,
+            avatarUrl = avatarUrl
+        )
+    }
+
     init {
         scope.launch {
             supabaseClient.auth.sessionStatus.collect { status ->
@@ -34,7 +49,7 @@ class AuthRepositoryImpl(
                     is SessionStatus.Authenticated -> {
                         val user = supabaseClient.auth.currentUserOrNull()
                         if (user != null) {
-                            _currentUser.value = AuthUser(id = user.id, email = user.email)
+                            _currentUser.value = mapToAuthUser(user)
                         }
                     }
                     is SessionStatus.NotAuthenticated -> {
@@ -51,7 +66,7 @@ class AuthRepositoryImpl(
             val user = supabaseClient.auth.currentUserOrNull()
             val session = supabaseClient.auth.currentSessionOrNull()
             if (session != null && user != null) {
-                val authUser = AuthUser(id = user.id, email = user.email)
+                val authUser = mapToAuthUser(user)
                 _currentUser.value = authUser
                 authUser
             } else {
@@ -69,7 +84,7 @@ class AuthRepositoryImpl(
             }
             val user = supabaseClient.auth.currentUserOrNull()
                 ?: throw IllegalStateException("No se pudo obtener la sesión del usuario.")
-            val authUser = AuthUser(id = user.id, email = user.email)
+            val authUser = mapToAuthUser(user)
             _currentUser.value = authUser
             authUser
         }
@@ -84,13 +99,31 @@ class AuthRepositoryImpl(
             val session = supabaseClient.auth.currentSessionOrNull()
             val user = supabaseClient.auth.currentUserOrNull()
             if (session != null && user != null) {
-                val authUser = AuthUser(id = user.id, email = user.email)
+                val authUser = mapToAuthUser(user)
                 _currentUser.value = authUser
                 SignUpResult.Authenticated(authUser)
             } else {
                 _currentUser.value = null
                 SignUpResult.RequiresEmailConfirmation(email.trim())
             }
+        }
+    }
+
+    override suspend fun updateProfile(username: String, avatarUrl: String?): Result<AuthUser> {
+        return runCatching {
+            supabaseClient.auth.updateUser {
+                data = buildJsonObject {
+                    put("username", username.trim())
+                    if (avatarUrl != null) {
+                        put("avatar_url", avatarUrl.trim())
+                    }
+                }
+            }
+            val user = supabaseClient.auth.currentUserOrNull()
+                ?: throw IllegalStateException("Usuario no autenticado.")
+            val authUser = mapToAuthUser(user)
+            _currentUser.value = authUser
+            authUser
         }
     }
 

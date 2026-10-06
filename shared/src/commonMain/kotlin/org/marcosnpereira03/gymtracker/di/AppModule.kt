@@ -21,6 +21,7 @@ import org.marcosnpereira03.gymtracker.domain.usecase.CalculateMuscleGroupVolume
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateOneRepMaxUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.GetExerciseHistoryUseCase
+import org.marcosnpereira03.gymtracker.domain.usecase.GetPersonalRecordsUseCase
 import org.marcosnpereira03.gymtracker.presentation.auth.AuthViewModel
 import org.marcosnpereira03.gymtracker.presentation.exercises.ExercisesViewModel
 import org.marcosnpereira03.gymtracker.presentation.history.HistoryViewModel
@@ -53,6 +54,7 @@ val useCaseModule = module {
     factoryOf(::CalculateWorkoutVolumeUseCase)
     factoryOf(::CalculateMuscleGroupVolumeUseCase)
     factoryOf(::GetExerciseHistoryUseCase)
+    factoryOf(::GetPersonalRecordsUseCase)
 }
 
 /**

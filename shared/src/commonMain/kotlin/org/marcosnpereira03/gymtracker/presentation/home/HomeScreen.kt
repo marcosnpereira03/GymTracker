@@ -164,7 +164,10 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val greetingText = if (state.currentUser != null) {
-                                    "👋 Hola ${state.currentUser?.email?.substringBefore('@') ?: "Usuario"}"
+                                    val displayName = state.currentUser?.username?.takeIf { it.isNotBlank() }
+                                        ?: state.currentUser?.email?.substringBefore('@')
+                                        ?: "Usuario"
+                                    "👋 Hola $displayName"
                                 } else {
                                     "👋 Bienvenido"
                                 }

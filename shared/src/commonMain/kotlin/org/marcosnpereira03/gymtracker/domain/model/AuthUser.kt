@@ -5,5 +5,8 @@ package org.marcosnpereira03.gymtracker.domain.model
  */
 data class AuthUser(
     val id: String,
-    val email: String? = null
+    val email: String? = null,
+    val username: String? = null,
+    val avatarUrl: String? = null
 )
+

@@ -20,7 +20,7 @@ sealed class BottomNavItem(
     object Workout : BottomNavItem(Screen.Workout.createRoute(), "Entrenar", Icons.Default.PlayArrow)
     object History : BottomNavItem(Screen.History.route, "Historial", Icons.Default.DateRange)
     object Exercises : BottomNavItem(Screen.Exercises.route, "Ejercicios", Icons.Default.List)
-    object Profile : BottomNavItem(Screen.Profile.route, "Pesajes", Icons.Default.Person)
+    object Profile : BottomNavItem(Screen.Profile.route, "Perfil", Icons.Default.Person)
 }
 
 val bottomNavItems = listOf(
