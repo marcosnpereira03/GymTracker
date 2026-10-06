@@ -1,12 +1,6 @@
 name: Continuous Integration (CI)
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - 'feat/**'
-      - 'fix/**'
   pull_request:
     branches:
       - main
@@ -15,6 +9,11 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 jobs:
   unit-tests-and-build:
@@ -43,14 +42,24 @@ jobs:
       - name: Run Domain & Shared Unit Tests
         run: ./gradlew :shared:testDebugUnitTest --no-daemon --stacktrace
 
+      - name: Publish Test Report to GitHub PR Checks
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: '**/build/test-results/**/TEST-*.xml'
+          check_name: '🧪 Unit Test Results (Domain & Shared)'
+          fail_on_failure: true
+          require_tests: true
+          detailed_summary: true
+
       - name: Verify Android App Build (assembleDebug)
         run: ./gradlew :androidApp:assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Test Results
+      - name: Upload Test Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-results
+          name: unit-test-html-reports
           path: |
             shared/build/reports/tests/testDebugUnitTest/
             androidApp/build/reports/tests/
