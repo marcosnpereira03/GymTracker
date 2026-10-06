@@ -1,33 +1,44 @@
 package org.marcosnpereira03.gymtracker.presentation.profile
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -36,7 +47,9 @@ import androidx.compose.ui.unit.sp
 import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.model.MuscleGroupVolume
 import org.marcosnpereira03.gymtracker.domain.model.PersonalRecord
+import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -199,12 +212,17 @@ fun ProfileScreen(
                 // 3. Contenido según la pestaña activa
                 when (state.activeTab) {
                     ProfileTab.STATS -> {
-                        // Selector de Período y resumen de volumen
+                        // Navegador interactivo de período con selector desplegable y botones < >
                         item {
-                            VolumePeriodSelector(
+                            PeriodNavigatorCard(
+                                title = "VOLUMEN POR MÚSCULO",
+                                extraInfo = "Total: ${state.totalPeriodVolumeKg.toInt()} kg",
                                 selectedPeriod = state.selectedPeriod,
-                                totalPeriodVolume = state.totalPeriodVolumeKg,
-                                onPeriodSelected = { viewModel.onSelectPeriod(it) }
+                                periodRangeLabel = state.periodRangeLabel,
+                                canNavigateForward = state.canNavigateForward,
+                                onPeriodSelected = { viewModel.onSelectPeriod(it) },
+                                onPreviousPeriod = { viewModel.onNavigatePreviousPeriod() },
+                                onNextPeriod = { viewModel.onNavigateNextPeriod() }
                             )
                         }
 
@@ -267,6 +285,29 @@ fun ProfileScreen(
                     }
 
                     ProfileTab.WEIGHT_LOGS -> {
+                        // Navegador interactivo de período para la sección de peso
+                        item {
+                            PeriodNavigatorCard(
+                                title = "EVOLUCIÓN DEL PESO",
+                                extraInfo = state.latestWeight?.let { "Actual: ${it.weightKg} kg" } ?: "--.- kg",
+                                selectedPeriod = state.weightPeriod,
+                                periodRangeLabel = state.weightPeriodRangeLabel,
+                                canNavigateForward = state.canNavigateWeightForward,
+                                onPeriodSelected = { viewModel.onSelectWeightPeriod(it) },
+                                onPreviousPeriod = { viewModel.onNavigatePreviousWeightPeriod() },
+                                onNextPeriod = { viewModel.onNavigateNextWeightPeriod() }
+                            )
+                        }
+
+                        // 1. Gráfico visual de evolución del peso estilo app fitness
+                        item {
+                            WeightEvolutionChartCard(
+                                weightLogs = state.filteredWeightLogs,
+                                latestWeight = state.latestWeight,
+                                totalWeightLostKg = state.totalWeightLostKg
+                            )
+                        }
+
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -274,7 +315,7 @@ fun ProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "HISTORIAL DE PESAJES",
+                                    text = "HISTORIAL DEL PERÍODO",
                                     color = Zinc400,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
@@ -286,12 +327,12 @@ fun ProfileScreen(
                                 ) {
                                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Anotar", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Text("Anotar Peso", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
 
-                        if (state.weightLogs.isEmpty()) {
+                        if (state.filteredWeightLogs.isEmpty()) {
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
@@ -304,7 +345,7 @@ fun ProfileScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text(
-                                            text = "No hay registros de peso aún.",
+                                            text = "No has registrado pesajes en este período.",
                                             color = Zinc400,
                                             fontSize = 13.sp
                                         )
@@ -312,9 +353,12 @@ fun ProfileScreen(
                                 }
                             }
                         } else {
-                            items(items = state.weightLogs, key = { it.id }) { log ->
+                            itemsIndexed(items = state.filteredWeightLogs, key = { _, log -> log.id }) { index, log ->
+                                val nextOlderLog = state.filteredWeightLogs.getOrNull(index + 1)
+                                val diffKg = nextOlderLog?.let { log.weightKg - it.weightKg }
                                 ProfileWeightLogRow(
                                     log = log,
+                                    diffKg = diffKg,
                                     onDelete = { viewModel.onDeleteWeightLog(log.id) }
                                 )
                             }
@@ -581,61 +625,156 @@ fun ProfileTabsSelector(
 }
 
 @Composable
-fun VolumePeriodSelector(
+fun PeriodNavigatorCard(
+    title: String,
+    extraInfo: String,
     selectedPeriod: VolumePeriod,
-    totalPeriodVolume: Double,
-    onPeriodSelected: (VolumePeriod) -> Unit
+    periodRangeLabel: String,
+    canNavigateForward: Boolean,
+    onPeriodSelected: (VolumePeriod) -> Unit,
+    onPreviousPeriod: () -> Unit,
+    onNextPeriod: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "VOLUMEN POR MÚSCULO",
-                color = Zinc400,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-            Text(
-                text = "Total: ${totalPeriodVolume.toInt()} kg",
-                color = Emerald400,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+    var expandedDropdown by remember { mutableStateOf(false) }
 
-        Spacer(modifier = Modifier.height(10.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Zinc900),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Fila superior: Selector de Período (Izquierda Dropdown, Derecha Info adicional)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Dropdown interactivo
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Zinc800)
+                            .clickable { expandedDropdown = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Período: ${selectedPeriod.label}",
+                            color = Emerald400,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Seleccionar período",
+                            tint = Emerald400,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Zinc900)
-                .border(1.dp, Zinc800, RoundedCornerShape(12.dp))
-                .padding(3.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            VolumePeriod.values().forEach { period ->
-                val isSelected = selectedPeriod == period
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) Zinc800 else Color.Transparent)
-                        .clickable { onPeriodSelected(period) }
-                        .padding(vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = period.label,
-                        color = if (isSelected) Emerald400 else Zinc400,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
+                    DropdownMenu(
+                        expanded = expandedDropdown,
+                        onDismissRequest = { expandedDropdown = false },
+                        modifier = Modifier.background(Zinc900)
+                    ) {
+                        VolumePeriod.values().forEach { period ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = period.label,
+                                            color = if (selectedPeriod == period) Emerald400 else White,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (selectedPeriod == period) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                        if (selectedPeriod == period) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Emerald400,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    onPeriodSelected(period)
+                                    expandedDropdown = false
+                                }
+                            )
+                        }
+                    }
                 }
+
+                // Info de cabecera derecha
+                Text(
+                    text = extraInfo,
+                    color = White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Fila de navegación temporal con [ < ] Fecha Inicio - Fin [ > ]
+            if (selectedPeriod != VolumePeriod.ALL_TIME) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Zinc950)
+                        .border(1.dp, Zinc800, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onPreviousPeriod,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Período anterior",
+                            tint = Emerald400,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    Text(
+                        text = periodRangeLabel,
+                        color = Zinc300,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    IconButton(
+                        onClick = onNextPeriod,
+                        enabled = canNavigateForward,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Período siguiente",
+                            tint = if (canNavigateForward) Emerald400 else Zinc700,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "Mostrando todo el historial acumulado",
+                    color = Zinc400,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             }
         }
     }
@@ -826,41 +965,320 @@ fun PersonalRecordCard(pr: PersonalRecord) {
     }
 }
 
+/**
+ * Tarjeta interactiva con gráfico Canvas para la evolución del peso según el período
+ */
 @Composable
-fun ProfileWeightLogRow(log: BodyWeightLog, onDelete: () -> Unit) {
+fun WeightEvolutionChartCard(
+    weightLogs: List<BodyWeightLog>,
+    latestWeight: BodyWeightLog?,
+    totalWeightLostKg: Double?
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Zinc900),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            // Encabezado de Peso Actual y Variación
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column {
+                    Text(
+                        text = "PESO ACTUAL",
+                        color = Zinc400,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    val weightText = latestWeight?.let { "${it.weightKg} kg" } ?: "--.- kg"
+                    Text(
+                        text = weightText,
+                        color = White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                if (totalWeightLostKg != null) {
+                    val isLoss = totalWeightLostKg > 0
+                    val sign = if (isLoss) "-" else "+"
+                    val label = if (isLoss) "Cambio: $sign${abs(totalWeightLostKg)} kg" else "Cambio: +${abs(totalWeightLostKg)} kg"
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isLoss) Emerald400.copy(alpha = 0.15f) else Color(0xFFF97316).copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isLoss) Emerald400.copy(alpha = 0.4f) else Color(0xFFF97316).copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Text(
+                            text = label,
+                            color = if (isLoss) Emerald400 else Color(0xFFF97316),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Gráfico Canvas con Curva y Gradiente
+            val chronologicalLogs = remember(weightLogs) { weightLogs.sortedBy { it.date } }
+
+            if (chronologicalLogs.size >= 2) {
+                WeightLineChart(
+                    logs = chronologicalLogs,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Zinc950),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (chronologicalLogs.isEmpty()) "Sin registros de peso en este período." else "Anota al menos 2 pesajes para ver tu curva de evolución.",
+                        color = Zinc500,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Canvas nativo de Compose que dibuja la línea de progreso de peso,
+ * puntos de control brillantes, líneas guía y etiquetas de fechas.
+ */
+@Composable
+fun WeightLineChart(
+    logs: List<BodyWeightLog>,
+    modifier: Modifier = Modifier
+) {
+    val emeraldColor = Emerald400
+    val gridLineColor = Zinc800
+    val textMutedColor = Zinc500
+
+    val weights = remember(logs) { logs.map { it.weightKg } }
+    val minWeight = remember(weights) { (weights.minOrNull() ?: 50.0) - 0.5 }
+    val maxWeight = remember(weights) { (weights.maxOrNull() ?: 100.0) + 0.5 }
+    val weightRange = if (maxWeight - minWeight > 0) maxWeight - minWeight else 1.0
+
+    Column(modifier = modifier) {
+        Canvas(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val width = size.width
+            val height = size.height
+            val paddingH = 16f
+            val paddingV = 16f
+            val chartWidth = width - (paddingH * 2)
+            val chartHeight = height - (paddingV * 2)
+
+            // Líneas guía horizontales punteadas
+            val lineCount = 3
+            for (i in 0..lineCount) {
+                val y = paddingV + (chartHeight / lineCount) * i
+                drawLine(
+                    color = gridLineColor,
+                    start = Offset(paddingH, y),
+                    end = Offset(width - paddingH, y),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                )
+            }
+
+            // Calcular coordenadas de los puntos
+            val points = logs.mapIndexed { index, log ->
+                val x = paddingH + (chartWidth / (logs.size - 1).coerceAtLeast(1)) * index
+                val normalizedY = ((log.weightKg - minWeight) / weightRange).toFloat()
+                val y = height - paddingV - (normalizedY * chartHeight)
+                Offset(x, y)
+            }
+
+            if (points.isNotEmpty()) {
+                // 1. Path de degradado de fondo
+                val fillPath = Path().apply {
+                    moveTo(points.first().x, height - paddingV)
+                    lineTo(points.first().x, points.first().y)
+                    for (i in 1 until points.size) {
+                        val p0 = points[i - 1]
+                        val p1 = points[i]
+                        val cx = (p0.x + p1.x) / 2
+                        cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                    }
+                    lineTo(points.last().x, height - paddingV)
+                    close()
+                }
+
+                drawPath(
+                    path = fillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            emeraldColor.copy(alpha = 0.35f),
+                            emeraldColor.copy(alpha = 0.05f),
+                            Color.Transparent
+                        )
+                    )
+                )
+
+                // 2. Path de la línea continua
+                val strokePath = Path().apply {
+                    moveTo(points.first().x, points.first().y)
+                    for (i in 1 until points.size) {
+                        val p0 = points[i - 1]
+                        val p1 = points[i]
+                        val cx = (p0.x + p1.x) / 2
+                        cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                    }
+                }
+
+                drawPath(
+                    path = strokePath,
+                    color = emeraldColor,
+                    style = Stroke(width = 3.dp.toPx())
+                )
+
+                // 3. Puntos de datos y halo brillante
+                points.forEachIndexed { idx, pt ->
+                    val isLatest = idx == points.size - 1
+                    if (isLatest) {
+                        drawCircle(
+                            color = emeraldColor.copy(alpha = 0.3f),
+                            radius = 9.dp.toPx(),
+                            center = pt
+                        )
+                    }
+                    drawCircle(
+                        color = if (isLatest) emeraldColor else Color(0xFFFBBF24),
+                        radius = 4.5.dp.toPx(),
+                        center = pt
+                    )
+                    drawCircle(
+                        color = Color.Black,
+                        radius = 2.dp.toPx(),
+                        center = pt
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Eje de fechas inferior
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            val dateLabels = remember(logs) {
+                if (logs.size <= 4) logs.map { DateTimeUtil.formatShortDate(it.date) }
+                else listOf(
+                    DateTimeUtil.formatShortDate(logs.first().date),
+                    DateTimeUtil.formatShortDate(logs[logs.size / 2].date),
+                    DateTimeUtil.formatShortDate(logs.last().date)
+                )
+            }
+            dateLabels.forEach { label ->
+                Text(
+                    text = label,
+                    color = textMutedColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileWeightLogRow(
+    log: BodyWeightLog,
+    diffKg: Double?,
+    onDelete: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Zinc900)
             .border(1.dp, Zinc800, RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
+            val dateStr = DateTimeUtil.formatFullShortDate(log.date)
+            Text(
+                text = dateStr,
+                color = Zinc300,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (!log.notes.isNullOrBlank()) {
+                Text(
+                    text = log.notes,
+                    color = Zinc500,
+                    fontSize = 11.sp
+                )
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "${log.weightKg} kg",
                 color = White,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.ExtraBold
             )
-            val dateStr = log.date.toString().substringBefore("T")
-            val notesStr = if (!log.notes.isNullOrBlank()) " • ${log.notes}" else ""
-            Text(
-                text = "$dateStr$notesStr",
-                color = Zinc400,
-                fontSize = 12.sp
-            )
-        }
 
-        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Eliminar pesaje",
-                tint = Red500.copy(alpha = 0.7f),
-                modifier = Modifier.size(16.dp)
-            )
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Indicador de variación (⬆️ / ⬇️ / ➖)
+            if (diffKg != null) {
+                val isLoss = diffKg < 0
+                val isGain = diffKg > 0
+                val arrowIcon = when {
+                    isLoss -> Icons.Default.ArrowDownward
+                    isGain -> Icons.Default.ArrowUpward
+                    else -> Icons.Default.Remove
+                }
+                val iconTint = when {
+                    isLoss -> Emerald400
+                    isGain -> Color(0xFFF97316)
+                    else -> Zinc500
+                }
+
+                Icon(
+                    imageVector = arrowIcon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Eliminar pesaje",
+                    tint = Red500.copy(alpha = 0.6f),
+                    modifier = Modifier.size(15.dp)
+                )
+            }
         }
     }
 }

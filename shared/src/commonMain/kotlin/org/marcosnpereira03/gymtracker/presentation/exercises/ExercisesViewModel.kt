@@ -40,7 +40,7 @@ class ExercisesViewModel(
                 val exercises = exercisesResult.getOrDefault(emptyList())
                 val workouts = workoutsResult.getOrDefault(emptyList())
 
-                val cardDataList = exercises.map { exercise ->
+                val cardDataList = exercises.sortedBy { it.name.lowercase() }.map { exercise ->
                     val history = getExerciseHistoryUseCase(exercise.id, workouts)
                     val max1Rm = history.maxOfOrNull { it.estimated1Rm } ?: 0.0
                     ExerciseCardData(

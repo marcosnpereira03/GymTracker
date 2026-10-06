@@ -34,6 +34,42 @@ object DateTimeUtil {
         }
     }
 
+    fun shortMonthName(monthNumber: Int): String {
+        return when (monthNumber) {
+            1 -> "Ene"
+            2 -> "Feb"
+            3 -> "Mar"
+            4 -> "Abr"
+            5 -> "May"
+            6 -> "Jun"
+            7 -> "Jul"
+            8 -> "Ago"
+            9 -> "Sep"
+            10 -> "Oct"
+            11 -> "Nov"
+            12 -> "Dic"
+            else -> ""
+        }
+    }
+
+    fun fullMonthName(monthNumber: Int): String {
+        return when (monthNumber) {
+            1 -> "Enero"
+            2 -> "Febrero"
+            3 -> "Marzo"
+            4 -> "Abril"
+            5 -> "Mayo"
+            6 -> "Junio"
+            7 -> "Julio"
+            8 -> "Agosto"
+            9 -> "Septiembre"
+            10 -> "Octubre"
+            11 -> "Noviembre"
+            12 -> "Diciembre"
+            else -> ""
+        }
+    }
+
     fun formatHeaderDate(instant: Instant = now()): String {
         val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         val dayName = when (dt.dayOfWeek.name) {
@@ -46,22 +82,18 @@ object DateTimeUtil {
             "SUNDAY" -> "Domingo"
             else -> "Hoy"
         }
-        val monthName = when (dt.month.name) {
-            "JANUARY" -> "Enero"
-            "FEBRUARY" -> "Febrero"
-            "MARCH" -> "Marzo"
-            "APRIL" -> "Abril"
-            "MAY" -> "Mayo"
-            "JUNE" -> "Junio"
-            "JULY" -> "Julio"
-            "AUGUST" -> "Agosto"
-            "SEPTEMBER" -> "Septiembre"
-            "OCTOBER" -> "Octubre"
-            "NOVEMBER" -> "Noviembre"
-            "DECEMBER" -> "Diciembre"
-            else -> ""
-        }
+        val monthName = fullMonthName(dt.month.ordinal + 1)
         return "$dayName, ${dt.day} De $monthName"
+    }
+
+    fun formatShortDate(instant: Instant): String {
+        val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        return "${dt.day} ${shortMonthName(dt.month.ordinal + 1).lowercase()}"
+    }
+
+    fun formatFullShortDate(instant: Instant): String {
+        val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        return "${dt.day} ${shortMonthName(dt.month.ordinal + 1).lowercase()} ${dt.year}"
     }
 }
 

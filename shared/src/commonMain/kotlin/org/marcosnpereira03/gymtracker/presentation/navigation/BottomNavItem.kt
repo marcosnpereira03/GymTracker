@@ -25,8 +25,8 @@ sealed class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem.Home,
-    BottomNavItem.Workout,
     BottomNavItem.History,
+    BottomNavItem.Workout,
     BottomNavItem.Exercises,
     BottomNavItem.Profile
 )

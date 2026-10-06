@@ -51,14 +51,14 @@ class ExerciseRepositoryImpl(
 
                 if (remoteList.isNotEmpty()) {
                     inMemoryCache.clear()
-                    inMemoryCache.addAll(remoteList)
-                    remoteList
-                } else {
+                    inMemoryCache.addAll(remoteList.sortedBy { it.name.lowercase() })
                     inMemoryCache.toList()
+                } else {
+                    inMemoryCache.sortedBy { it.name.lowercase() }
                 }
             } catch (_: Exception) {
                 // Si la red falla o Supabase no está configurado, respondemos con la caché resiliente
-                inMemoryCache.toList()
+                inMemoryCache.sortedBy { it.name.lowercase() }
             }
         }
     }
