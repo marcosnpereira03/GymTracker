@@ -36,8 +36,8 @@ class WorkoutSessionViewModel(
     }
 
     fun initSession(workoutId: String? = null, initialDateString: String? = null) {
-        // Resetear inmediatamente isSavedSuccess para evitar navegación no deseada
-        _uiState.update { it.copy(isSavedSuccess = false) }
+        // Resetear inmediatamente isSavedSuccess para evitar navegación no deseada y activar loading
+        _uiState.update { it.copy(isLoading = true, isSavedSuccess = false, errorMessage = null) }
 
         viewModelScope.launch {
             val exercisesResult = if (_uiState.value.availableExercises.isEmpty()) {
@@ -55,8 +55,6 @@ class WorkoutSessionViewModel(
                     _uiState.update { it.copy(availableExercises = exercisesResult, historicalWorkouts = historicalWorkoutsResult, isLoading = false, isSavedSuccess = false) }
                     return@launch
                 }
-
-                _uiState.update { it.copy(isLoading = true, errorMessage = null, isSavedSuccess = false) }
 
                 // Cargar sesión existente para editar
                 val workoutResult = workoutRepository.getWorkoutById(workoutId)

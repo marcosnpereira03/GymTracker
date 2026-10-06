@@ -120,6 +120,7 @@ class WorkoutRepositoryImpl(
                             or {
                                 eq("entrenamiento_id", sanitizedId)
                                 eq("entrenamiento_id", remoteDto.id)
+                                eq("entrenamiento_id", id)
                             }
                         }
                     }.decodeList<WorkoutSetDto>()
@@ -137,10 +138,19 @@ class WorkoutRepositoryImpl(
                 println("Error fetching single workout from Supabase: ${e.message}")
             }
 
-            // 3. Fallback al objeto en memoria si existe
-            inMemoryMatch ?: inMemoryWorkouts.first {
-                it.id.equals(sanitizedId, ignoreCase = true) || it.id.equals(id, ignoreCase = true)
+            // 3. Si aún no se encontró, recargar la lista completa de Supabase
+            if (inMemoryMatch == null) {
+                val freshList = getWorkouts().getOrDefault(emptyList())
+                val freshMatch = freshList.find {
+                    it.id.equals(sanitizedId, ignoreCase = true) || it.id.equals(id, ignoreCase = true)
+                }
+                if (freshMatch != null) {
+                    return@runCatching freshMatch
+                }
             }
+
+            // 4. Fallback al objeto en memoria si existe o error controlado
+            inMemoryMatch ?: throw NoSuchElementException("No se encontró el entrenamiento con ID: $id")
         }
     }
 

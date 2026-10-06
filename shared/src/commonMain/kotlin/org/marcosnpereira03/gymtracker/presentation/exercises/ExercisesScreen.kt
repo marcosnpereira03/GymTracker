@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
@@ -156,7 +157,7 @@ fun ExercisesScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            if (state.isLoading && state.exercises.isEmpty()) {
+            if (state.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -213,12 +214,17 @@ fun ExerciseItemCard(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(CircleShape)
                         .background(Zinc800)
-                        .border(1.dp, Zinc700, RoundedCornerShape(12.dp)),
+                        .border(1.dp, Emerald500.copy(alpha = 0.3f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🏋️", fontSize = 18.sp)
+                    Icon(
+                        imageVector = Icons.Default.FitnessCenter,
+                        contentDescription = null,
+                        tint = Emerald400,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(14.dp))

@@ -14,11 +14,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,12 +38,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.marcosnpereira03.gymtracker.presentation.theme.*
-
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.marcosnpereira03.gymtracker.presentation.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +110,12 @@ fun WorkoutSessionScreen(
                                 strokeWidth = 2.5.dp
                             )
                         } else {
-                            Text("💾", fontSize = 16.sp)
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (actualWorkoutId != null) "Guardar Cambios del Entrenamiento" else "Finalizar y Guardar el entrenamiento",
@@ -124,6 +132,7 @@ fun WorkoutSessionScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Zinc950)
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
@@ -281,7 +290,12 @@ fun WorkoutSessionScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text("⚠️", fontSize = 16.sp)
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = Red500,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = state.errorMessage ?: "",
@@ -294,7 +308,12 @@ fun WorkoutSessionScreen(
                                     onClick = { viewModel.onClearError() },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Text("✕", color = Red500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Cerrar",
+                                        tint = Red500,
+                                        modifier = Modifier.size(14.dp)
+                                    )
                                 }
                             }
                         }
@@ -336,7 +355,21 @@ fun WorkoutSessionScreen(
                                     .padding(vertical = 40.dp, horizontal = 20.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("🏋️", fontSize = 32.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(Zinc800)
+                                        .border(1.dp, Emerald500.copy(alpha = 0.3f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FitnessCenter,
+                                        tint = Emerald400,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "No hay ejercicios agregados aún",
@@ -756,12 +789,21 @@ fun ExerciseHistoryDialog(
 
                     if (bestRecord != null) {
                         val weightStr = if (bestRecord.weightKg % 1.0 == 0.0) "${bestRecord.weightKg.toInt()}" else "${bestRecord.weightKg}"
-                        Text(
-                            text = "🏅 $weightStr kg × ${bestRecord.reps} reps",
-                            color = Emerald400,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = Emerald400,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "$weightStr kg × ${bestRecord.reps} reps",
+                                color = Emerald400,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     } else {
                         Text(
                             text = "Sin registros",

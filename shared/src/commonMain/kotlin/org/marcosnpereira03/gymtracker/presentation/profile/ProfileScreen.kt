@@ -142,10 +142,11 @@ fun ProfileScreen(
             )
         }
     ) { paddingValues ->
-        if (state.isLoading && state.weightLogs.isEmpty() && state.totalWorkoutsCount == 0) {
+        if (state.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Zinc950)
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
@@ -173,7 +174,12 @@ fun ProfileScreen(
                                 modifier = Modifier.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("✅", fontSize = 14.sp)
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Emerald400,
+                                    modifier = Modifier.size(16.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = state.successMessage ?: "",
@@ -941,8 +947,15 @@ fun PersonalRecordCard(pr: PersonalRecord) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = Emerald400,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "🏆 ${pr.weightKg} kg × ${pr.reps}",
+                        text = "${pr.weightKg} kg × ${pr.reps}",
                         color = Emerald400,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
