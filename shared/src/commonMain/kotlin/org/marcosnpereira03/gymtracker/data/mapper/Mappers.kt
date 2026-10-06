@@ -23,9 +23,10 @@ fun ExerciseDto.toDomain(): Exercise {
     )
 }
 
-fun Exercise.toDto(): ExerciseDto {
+fun Exercise.toDto(userId: String? = null): ExerciseDto {
     return ExerciseDto(
         id = id,
+        userId = userId,
         name = name,
         muscleGroup = muscleGroup
     )
@@ -44,22 +45,28 @@ fun WorkoutSetDto.toDomain(): WorkoutSet {
     )
 }
 
-fun WorkoutSet.toDto(): WorkoutSetDto {
+fun WorkoutSet.toDto(userId: String? = null): WorkoutSetDto {
     return WorkoutSetDto(
         id = id,
+        userId = userId,
         workoutId = workoutId,
         exerciseId = exerciseId,
         setNumber = setNumber,
         weightKg = weightKg,
         reps = reps,
-        rir = rir
+        rir = rir,
+        notes = null
     )
 }
 
 // Workout Mappers
 fun WorkoutDto.toDomain(sets: List<WorkoutSet> = emptyList()): Workout {
     val parsedInstant = try {
-        Instant.parse(date)
+        if (date.contains("T")) {
+            Instant.parse(date)
+        } else {
+            Instant.parse("${date}T00:00:00Z")
+        }
     } catch (_: Exception) {
         Instant.fromEpochMilliseconds(0)
     }
@@ -68,18 +75,19 @@ fun WorkoutDto.toDomain(sets: List<WorkoutSet> = emptyList()): Workout {
         id = id,
         title = title,
         date = parsedInstant,
-        bodyWeight = bodyWeight,
+        bodyWeight = null,
         notes = notes,
         sets = sets
     )
 }
 
-fun Workout.toDto(): WorkoutDto {
+fun Workout.toDto(userId: String? = null): WorkoutDto {
+    val dateString = date.toString().substringBefore('T')
     return WorkoutDto(
         id = id,
+        userId = userId,
         title = title,
-        date = date.toString(),
-        bodyWeight = bodyWeight,
+        date = dateString,
         notes = notes
     )
 }
@@ -87,7 +95,11 @@ fun Workout.toDto(): WorkoutDto {
 // BodyWeightLog Mappers
 fun BodyWeightLogDto.toDomain(): BodyWeightLog {
     val parsedInstant = try {
-        Instant.parse(date)
+        if (date.contains("T")) {
+            Instant.parse(date)
+        } else {
+            Instant.parse("${date}T00:00:00Z")
+        }
     } catch (_: Exception) {
         Instant.fromEpochMilliseconds(0)
     }
@@ -96,15 +108,16 @@ fun BodyWeightLogDto.toDomain(): BodyWeightLog {
         id = id,
         date = parsedInstant,
         weightKg = weightKg,
-        notes = notes
+        notes = null
     )
 }
 
-fun BodyWeightLog.toDto(): BodyWeightLogDto {
+fun BodyWeightLog.toDto(userId: String? = null): BodyWeightLogDto {
+    val dateString = date.toString().substringBefore('T')
     return BodyWeightLogDto(
         id = id,
-        date = date.toString(),
-        weightKg = weightKg,
-        notes = notes
+        userId = userId,
+        date = dateString,
+        weightKg = weightKg
     )
 }

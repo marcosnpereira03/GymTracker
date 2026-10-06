@@ -4,22 +4,22 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Data Transfer Object para la tabla 'workouts' en Supabase.
+ * Data Transfer Object para la tabla 'entrenamientos' en Supabase.
  */
 @Serializable
 data class WorkoutDto(
     @SerialName("id")
     val id: String,
     
-    @SerialName("title")
-    val title: String,
+    @SerialName("user_id")
+    val userId: String? = null,
     
-    @SerialName("date")
+    @SerialName("fecha")
     val date: String,
     
-    @SerialName("body_weight")
-    val bodyWeight: Double? = null,
+    @SerialName("nombre_sesion")
+    val title: String,
     
-    @SerialName("notes")
+    @SerialName("observaciones")
     val notes: String? = null
 )

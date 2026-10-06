@@ -14,6 +14,7 @@ import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateOneRepMaxUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
+import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
@@ -30,7 +31,14 @@ class WorkoutSessionViewModel(
     private val _uiState = MutableStateFlow(WorkoutSessionUiState(isLoading = true))
     val uiState: StateFlow<WorkoutSessionUiState> = _uiState.asStateFlow()
 
+    fun onResetSavedSuccess() {
+        _uiState.update { it.copy(isSavedSuccess = false) }
+    }
+
     fun initSession(workoutId: String? = null, initialDateString: String? = null) {
+        // Resetear inmediatamente isSavedSuccess para evitar navegación no deseada
+        _uiState.update { it.copy(isSavedSuccess = false) }
+
         viewModelScope.launch {
             val exercisesResult = if (_uiState.value.availableExercises.isEmpty()) {
                 exerciseRepository.getExercises().getOrDefault(emptyList())
@@ -39,23 +47,26 @@ class WorkoutSessionViewModel(
             }
             val firstExercise = exercisesResult.firstOrNull()
 
+            val historicalWorkoutsResult = workoutRepository.getWorkouts().getOrDefault(emptyList())
+
             if (workoutId != null) {
                 // Si ya estamos editando exactamente este entrenamiento, no lo reiniciamos
                 if (_uiState.value.workoutId == workoutId && _uiState.value.sets.isNotEmpty()) {
-                    _uiState.update { it.copy(availableExercises = exercisesResult, isLoading = false) }
+                    _uiState.update { it.copy(availableExercises = exercisesResult, historicalWorkouts = historicalWorkoutsResult, isLoading = false, isSavedSuccess = false) }
                     return@launch
                 }
 
-                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                _uiState.update { it.copy(isLoading = true, errorMessage = null, isSavedSuccess = false) }
 
                 // Cargar sesión existente para editar
                 val workoutResult = workoutRepository.getWorkoutById(workoutId)
                 if (workoutResult.isSuccess) {
                     val workout = workoutResult.getOrThrow()
-                    val exerciseMap = exercisesResult.associateBy { it.id }
+                    val exerciseMap = exercisesResult.associateBy { it.id.lowercase() }
 
                     val editableSets = workout.sets.map { set ->
-                        val ex = exerciseMap[set.exerciseId]
+                        val ex = exerciseMap[set.exerciseId.lowercase()]
+                            ?: exercisesResult.find { it.id.equals(set.exerciseId, ignoreCase = true) }
                         val name = ex?.name ?: "Ejercicio"
                         val oneRm = calculateOneRepMaxUseCase(set.weightKg, set.reps, set.rir)
                         val weightStr = if (set.weightKg > 0.0) {
@@ -63,7 +74,7 @@ class WorkoutSessionViewModel(
                         } else ""
                         EditableSet(
                             id = set.id,
-                            exerciseId = set.exerciseId,
+                            exerciseId = ex?.id ?: set.exerciseId,
                             exerciseName = name,
                             setNumber = set.setNumber,
                             weightText = weightStr,
@@ -84,6 +95,7 @@ class WorkoutSessionViewModel(
                             sets = editableSets,
                             availableExercises = exercisesResult,
                             selectedExercise = firstExercise,
+                            historicalWorkouts = historicalWorkoutsResult,
                             totalVolumeKg = calculateWorkoutVolumeUseCase(workout),
                             isSavedSuccess = false,
                             isLoading = false
@@ -93,40 +105,17 @@ class WorkoutSessionViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isSavedSuccess = false,
                             errorMessage = "No se pudo cargar el entrenamiento seleccionado."
                         )
                     }
                 }
             } else {
                 // Modo sesión en vivo / borrador
-                // Si la sesión anterior ya fue guardada con éxito, limpiamos para una nueva
-                if (_uiState.value.isSavedSuccess) {
-                    val sessionDate = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.parseDateOrNow(initialDateString)
-                    val now = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now()
-                    _uiState.update {
-                        it.copy(
-                            workoutId = "w-${now.toEpochMilliseconds()}",
-                            title = "Entrenamiento",
-                            date = sessionDate,
-                            availableExercises = exercisesResult,
-                            selectedExercise = firstExercise,
-                            sets = emptyList(),
-                            bodyWeightText = "",
-                            notes = "",
-                            totalVolumeKg = 0.0,
-                            isSavedSuccess = false,
-                            isLoading = false,
-                            errorMessage = null
-                        )
-                    }
-                    return@launch
-                }
-
                 // Si ya existe un borrador en curso con series o notas, conservamos el borrador sin borrarlo al navegar
                 val hasExistingDraft = _uiState.value.sets.isNotEmpty() ||
                         _uiState.value.notes.isNotBlank() ||
-                        _uiState.value.bodyWeightText.isNotBlank() ||
-                        (_uiState.value.workoutId != null && _uiState.value.workoutId!!.startsWith("w-"))
+                        _uiState.value.bodyWeightText.isNotBlank()
 
                 if (hasExistingDraft && _uiState.value.workoutId != null) {
                     if (initialDateString != null) {
@@ -135,6 +124,8 @@ class WorkoutSessionViewModel(
                             it.copy(
                                 date = sessionDate,
                                 availableExercises = exercisesResult,
+                                historicalWorkouts = historicalWorkoutsResult,
+                                isSavedSuccess = false,
                                 isLoading = false
                             )
                         }
@@ -142,21 +133,23 @@ class WorkoutSessionViewModel(
                         _uiState.update {
                             it.copy(
                                 availableExercises = exercisesResult,
+                                historicalWorkouts = historicalWorkoutsResult,
+                                isSavedSuccess = false,
                                 isLoading = false
                             )
                         }
                     }
                 } else {
-                    // Primera inicialización de una sesión en blanco
+                    // Inicialización de una sesión en blanco con UUID estándar
                     val sessionDate = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.parseDateOrNow(initialDateString)
-                    val now = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now()
                     _uiState.update {
                         it.copy(
-                            workoutId = "w-${now.toEpochMilliseconds()}",
+                            workoutId = UuidUtil.randomUuid(),
                             title = "Entrenamiento",
                             date = sessionDate,
                             availableExercises = exercisesResult,
                             selectedExercise = firstExercise,
+                            historicalWorkouts = historicalWorkoutsResult,
                             sets = emptyList(),
                             bodyWeightText = "",
                             notes = "",
@@ -191,6 +184,116 @@ class WorkoutSessionViewModel(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
+    fun onMoveExerciseUp(exerciseId: String) {
+        val currentSets = _uiState.value.sets
+        val orderedExerciseIds = currentSets.map { it.exerciseId }.distinct().toMutableList()
+        val index = orderedExerciseIds.indexOf(exerciseId)
+        if (index > 0) {
+            val temp = orderedExerciseIds[index]
+            orderedExerciseIds[index] = orderedExerciseIds[index - 1]
+            orderedExerciseIds[index - 1] = temp
+
+            val setsByExercise = currentSets.groupBy { it.exerciseId }
+            val reorderedSets = orderedExerciseIds.flatMap { id -> setsByExercise[id] ?: emptyList() }
+            _uiState.update { it.copy(sets = reorderedSets) }
+        }
+    }
+
+    fun onMoveExerciseDown(exerciseId: String) {
+        val currentSets = _uiState.value.sets
+        val orderedExerciseIds = currentSets.map { it.exerciseId }.distinct().toMutableList()
+        val index = orderedExerciseIds.indexOf(exerciseId)
+        if (index != -1 && index < orderedExerciseIds.size - 1) {
+            val temp = orderedExerciseIds[index]
+            orderedExerciseIds[index] = orderedExerciseIds[index + 1]
+            orderedExerciseIds[index + 1] = temp
+
+            val setsByExercise = currentSets.groupBy { it.exerciseId }
+            val reorderedSets = orderedExerciseIds.flatMap { id -> setsByExercise[id] ?: emptyList() }
+            _uiState.update { it.copy(sets = reorderedSets) }
+        }
+    }
+
+    fun onOpenExerciseHistory(exerciseId: String) {
+        _uiState.update { it.copy(viewingHistoryExerciseId = exerciseId) }
+    }
+
+    fun onCloseExerciseHistory() {
+        _uiState.update { it.copy(viewingHistoryExerciseId = null) }
+    }
+
+    fun onSetHistoryLimit(limit: Int) {
+        _uiState.update { it.copy(historyLimit = limit) }
+    }
+
+    /**
+     * Obtiene las sesiones históricas previas donde se realizó el ejercicio especificado.
+     */
+    fun getPastSessionsForExercise(exerciseId: String, limit: Int): List<ExercisePastSession> {
+        val state = _uiState.value
+        val currentWorkoutId = state.workoutId
+
+        // Excluir el workout actual si está en edición para no duplicar datos
+        val pastWorkouts = state.historicalWorkouts.filter { workout ->
+            workout.id != currentWorkoutId && workout.sets.any { it.exerciseId == exerciseId }
+        }
+
+        return pastWorkouts
+            .take(limit)
+            .map { workout ->
+                val exerciseSets = workout.sets
+                    .filter { it.exerciseId == exerciseId }
+                    .sortedBy { it.setNumber }
+
+                ExercisePastSession(
+                    workoutId = workout.id,
+                    workoutTitle = workout.title,
+                    workoutDate = workout.date,
+                    sets = exerciseSets
+                )
+            }
+    }
+
+    /**
+     * Obtiene el total de sesiones históricas disponibles para el ejercicio.
+     */
+    fun getTotalPastSessionsCount(exerciseId: String): Int {
+        val state = _uiState.value
+        val currentWorkoutId = state.workoutId
+        return state.historicalWorkouts.count { workout ->
+            workout.id != currentWorkoutId && workout.sets.any { it.exerciseId == exerciseId }
+        }
+    }
+
+    /**
+     * Obtiene el mejor récord histórico registrado (mayor peso y reps) para el ejercicio.
+     */
+    fun getBestRecordForExercise(exerciseId: String): WorkoutSet? {
+        val state = _uiState.value
+        val allSets = state.historicalWorkouts.flatMap { it.sets }.filter { it.exerciseId == exerciseId }
+        if (allSets.isEmpty()) return null
+
+        return allSets.maxWithOrNull(
+            compareBy<WorkoutSet> { it.weightKg }
+                .thenBy { it.reps }
+        )
+    }
+
+    /**
+     * Obtiene el resumen de la última vez que se realizó el ejercicio: fecha formateada y serie destacada.
+     */
+    fun getLastSessionSummary(exerciseId: String): Pair<String, String>? {
+        val pastSessions = getPastSessionsForExercise(exerciseId, limit = 1)
+        val lastSession = pastSessions.firstOrNull() ?: return null
+        val bestOrFirstSet = lastSession.sets.maxByOrNull { it.weightKg } ?: lastSession.sets.firstOrNull() ?: return null
+
+        val dateStr = lastSession.workoutDate.toString().substringBefore("T")
+        val weightFormatted = if (bestOrFirstSet.weightKg % 1.0 == 0.0) "${bestOrFirstSet.weightKg.toInt()}" else "${bestOrFirstSet.weightKg}"
+        val summary = "$weightFormatted kg × ${bestOrFirstSet.reps} (RIR ${bestOrFirstSet.rir})"
+
+        return Pair(dateStr, summary)
+    }
+
     fun onToggleSetCompleted(setId: String) {
         val updatedSets = _uiState.value.sets.map { set ->
             if (set.id == setId) {
@@ -223,7 +326,7 @@ class WorkoutSessionViewModel(
         val oneRm = calculateOneRepMaxUseCase(w, r, defaultRir)
 
         val newSet = EditableSet(
-            id = "s-${org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now().toEpochMilliseconds()}-${currentSets.size + 1}",
+            id = UuidUtil.randomUuid(),
             exerciseId = selected.id,
             exerciseName = selected.name,
             setNumber = exerciseSetsCount + 1,
@@ -262,7 +365,7 @@ class WorkoutSessionViewModel(
         val oneRm = calculateOneRepMaxUseCase(w, r, defaultRir)
 
         val newSet = EditableSet(
-            id = "s-${org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now().toEpochMilliseconds()}-${currentSets.size + 1}",
+            id = UuidUtil.randomUuid(),
             exerciseId = exerciseId,
             exerciseName = exerciseName,
             setNumber = exerciseSets.size + 1,
@@ -300,7 +403,7 @@ class WorkoutSessionViewModel(
         val firstEx = _uiState.value.availableExercises.firstOrNull()
         _uiState.update {
             it.copy(
-                workoutId = "w-${now.toEpochMilliseconds()}",
+                workoutId = UuidUtil.randomUuid(),
                 title = "Entrenamiento",
                 date = now,
                 notes = "",
@@ -352,25 +455,32 @@ class WorkoutSessionViewModel(
 
     fun onSaveWorkout() {
         val state = _uiState.value
-        val workoutId = state.workoutId ?: "w-${org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now().toEpochMilliseconds()}"
+        val workoutId = UuidUtil.ensureUuid(state.workoutId)
         val workoutDate = state.date ?: org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now()
 
-        // Filtrar exclusivamente las series que están marcadas en verde (isCompleted == true)
-        val completedSets = state.sets.filter { it.isCompleted }
-        if (completedSets.isEmpty()) {
+        if (state.sets.isEmpty()) {
             _uiState.update {
                 it.copy(
-                    errorMessage = "Debes marcar al menos una serie como lista (en verde) antes de guardar el entrenamiento."
+                    errorMessage = "Debes añadir al menos una serie antes de guardar el entrenamiento."
                 )
             }
             return
         }
 
-        val domainSets = completedSets.mapIndexed { index, s ->
+        // Si el usuario marcó series completadas, tomamos esas; si no, tomamos todas las series cargadas
+        val completedSets = state.sets.filter { it.isCompleted }
+        val setsToSave = if (completedSets.isNotEmpty()) {
+            completedSets
+        } else {
+            val filledSets = state.sets.filter { it.weightText.isNotBlank() || it.repsText.isNotBlank() }
+            if (filledSets.isNotEmpty()) filledSets else state.sets
+        }
+
+        val domainSets = setsToSave.mapIndexed { index, s ->
             WorkoutSet(
-                id = s.id,
+                id = UuidUtil.ensureUuid(s.id),
                 workoutId = workoutId,
-                exerciseId = s.exerciseId,
+                exerciseId = UuidUtil.ensureUuid(s.exerciseId),
                 setNumber = index + 1,
                 weightKg = s.weightText.toDoubleOrNull() ?: 0.0,
                 reps = s.repsText.toIntOrNull() ?: 0,
@@ -392,13 +502,24 @@ class WorkoutSessionViewModel(
             val saveResult = workoutRepository.saveWorkout(workout)
 
             if (saveResult.isSuccess) {
+                val now = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now()
+                val exercises = _uiState.value.availableExercises
+                val updatedHistory = workoutRepository.getWorkouts().getOrDefault(emptyList())
+
                 _uiState.update {
                     it.copy(
                         isSaving = false,
                         isSavedSuccess = true,
-                        sets = emptyList(),
+                        workoutId = UuidUtil.randomUuid(),
+                        title = "Entrenamiento",
+                        date = now,
                         notes = "",
-                        bodyWeightText = ""
+                        bodyWeightText = "",
+                        sets = emptyList(),
+                        selectedExercise = exercises.firstOrNull(),
+                        historicalWorkouts = updatedHistory,
+                        totalVolumeKg = 0.0,
+                        errorMessage = null
                     )
                 }
             } else {

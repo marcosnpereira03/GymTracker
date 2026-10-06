@@ -210,7 +210,7 @@ class ProfileViewModel(
         if (weightKg <= 0.0) return
         viewModelScope.launch {
             val log = BodyWeightLog(
-                id = "bw-${DateTimeUtil.now().toEpochMilliseconds()}",
+                id = org.marcosnpereira03.gymtracker.domain.util.UuidUtil.randomUuid(),
                 date = DateTimeUtil.now(),
                 weightKg = weightKg,
                 notes = notes?.ifBlank { null }

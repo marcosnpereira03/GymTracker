@@ -1,6 +1,7 @@
 package org.marcosnpereira03.gymtracker.data.repository
 
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import org.marcosnpereira03.gymtracker.data.mapper.toDomain
 import org.marcosnpereira03.gymtracker.data.mapper.toDto
@@ -8,6 +9,8 @@ import org.marcosnpereira03.gymtracker.data.remote.dto.BodyWeightLogDto
 import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
 import kotlinx.datetime.Instant
+
+import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 
 /**
  * Implementación de ProfileRepository con Supabase Postgrest y almacenamiento resiliente.
@@ -17,17 +20,17 @@ class ProfileRepositoryImpl(
 ) : ProfileRepository {
 
     private val inMemoryLogs = mutableListOf<BodyWeightLog>().apply {
-        add(BodyWeightLog(id = "bw-1", date = Instant.parse("2026-10-02T08:00:00Z"), weightKg = 78.5, notes = "En ayunas"))
-        add(BodyWeightLog(id = "bw-2", date = Instant.parse("2026-09-25T08:00:00Z"), weightKg = 78.2, notes = "En ayunas"))
-        add(BodyWeightLog(id = "bw-3", date = Instant.parse("2026-09-18T08:00:00Z"), weightKg = 77.8, notes = "Post cardio"))
-        add(BodyWeightLog(id = "bw-4", date = Instant.parse("2026-09-11T08:00:00Z"), weightKg = 77.4, notes = "En ayunas"))
-        add(BodyWeightLog(id = "bw-5", date = Instant.parse("2026-09-04T08:00:00Z"), weightKg = 77.0, notes = "Inicio de ciclo"))
+        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-1"), date = Instant.parse("2026-10-02T08:00:00Z"), weightKg = 78.5, notes = "En ayunas"))
+        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-2"), date = Instant.parse("2026-09-25T08:00:00Z"), weightKg = 78.2, notes = "En ayunas"))
+        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-3"), date = Instant.parse("2026-09-18T08:00:00Z"), weightKg = 77.8, notes = "Post cardio"))
+        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-4"), date = Instant.parse("2026-09-11T08:00:00Z"), weightKg = 77.4, notes = "En ayunas"))
+        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-5"), date = Instant.parse("2026-09-04T08:00:00Z"), weightKg = 77.0, notes = "Inicio de ciclo"))
     }
 
     override suspend fun getBodyWeightLogs(): Result<List<BodyWeightLog>> {
         return runCatching {
             try {
-                val remoteLogs = supabaseClient.from("body_weight_logs")
+                val remoteLogs = supabaseClient.from("pesajes")
                     .select()
                     .decodeList<BodyWeightLogDto>()
                     .map { it.toDomain() }
@@ -39,7 +42,8 @@ class ProfileRepositoryImpl(
                 } else {
                     inMemoryLogs.sortedByDescending { it.date }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                println("Error fetching body weight logs from Supabase: ${e.message}")
                 inMemoryLogs.sortedByDescending { it.date }
             }
         }
@@ -47,27 +51,32 @@ class ProfileRepositoryImpl(
 
     override suspend fun saveBodyWeightLog(log: BodyWeightLog): Result<BodyWeightLog> {
         return runCatching {
+            val validLog = log.copy(id = UuidUtil.ensureUuid(log.id))
+            val currentUserId = supabaseClient.auth.currentUserOrNull()?.id
             try {
-                supabaseClient.from("body_weight_logs").upsert(log.toDto())
-            } catch (_: Exception) {
-                // Modo fallback offline
+                supabaseClient.from("pesajes").upsert(validLog.toDto(currentUserId))
+                println("Successfully saved body weight log to Supabase: ${validLog.id}")
+            } catch (e: Exception) {
+                println("Error saving body weight log to Supabase: ${e.message}")
+                e.printStackTrace()
             }
-            inMemoryLogs.removeAll { it.id == log.id }
-            inMemoryLogs.add(0, log)
-            log
+            inMemoryLogs.removeAll { it.id == validLog.id || it.id == log.id }
+            inMemoryLogs.add(0, validLog)
+            validLog
         }
     }
 
     override suspend fun deleteBodyWeightLog(id: String): Result<Unit> {
         return runCatching {
+            val validId = UuidUtil.ensureUuid(id)
             try {
-                supabaseClient.from("body_weight_logs").delete {
-                    filter { eq("id", id) }
+                supabaseClient.from("pesajes").delete {
+                    filter { eq("id", validId) }
                 }
-            } catch (_: Exception) {
-                // Modo fallback offline
+            } catch (e: Exception) {
+                println("Error deleting body weight log in Supabase: ${e.message}")
             }
-            inMemoryLogs.removeAll { it.id == id }
+            inMemoryLogs.removeAll { it.id == validId || it.id == id }
             Unit
         }
     }

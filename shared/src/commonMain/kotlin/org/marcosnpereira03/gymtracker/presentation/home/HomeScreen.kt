@@ -30,6 +30,7 @@ import org.marcosnpereira03.gymtracker.presentation.theme.*
 
 import androidx.compose.material.icons.automirrored.filled.Login
 import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun HomeScreen(
@@ -41,6 +42,10 @@ fun HomeScreen(
     onWorkoutClick: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadDashboardData()
+    }
 
     Scaffold(
         containerColor = Zinc950
@@ -255,10 +260,12 @@ fun HomeScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                val weightVal = state.latestWeight?.weightKg ?: 87.6
+                                val weightVal = state.latestWeight?.let {
+                                    if (it.weightKg % 1.0 == 0.0) "${it.weightKg.toInt()}" else "${it.weightKg}"
+                                } ?: "--"
                                 Row(verticalAlignment = Alignment.Bottom) {
                                     Text(
-                                        text = "$weightVal",
+                                        text = weightVal,
                                         color = White,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold

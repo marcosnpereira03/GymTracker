@@ -4,19 +4,19 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Data Transfer Object para la tabla 'body_weight_logs' en Supabase.
+ * Data Transfer Object para la tabla 'pesajes' en Supabase.
  */
 @Serializable
 data class BodyWeightLogDto(
     @SerialName("id")
     val id: String,
     
-    @SerialName("date")
+    @SerialName("user_id")
+    val userId: String? = null,
+    
+    @SerialName("fecha")
     val date: String,
     
-    @SerialName("weight_kg")
-    val weightKg: Double,
-    
-    @SerialName("notes")
-    val notes: String? = null
+    @SerialName("peso_kg")
+    val weightKg: Double
 )

@@ -136,13 +136,31 @@ fun AppNavigation() {
                 HomeScreen(
                     viewModel = viewModel,
                     onStartWorkout = {
-                        navController.navigate(Screen.Workout.createRoute())
+                        navController.navigate(Screen.Workout.createRoute()) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
                     onNavigateToHistory = {
-                        navController.navigate(Screen.History.route)
+                        navController.navigate(Screen.History.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
                     onNavigateToProfile = {
-                        navController.navigate(Screen.Profile.route)
+                        navController.navigate(Screen.Profile.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
                     onNavigateToAuth = {
                         navController.navigate(Screen.Auth.route)
@@ -179,7 +197,15 @@ fun AppNavigation() {
                     workoutId = workoutId,
                     initialDate = date,
                     onNavigateBack = {
-                        navController.popBackStack()
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     }
                 )
             }
