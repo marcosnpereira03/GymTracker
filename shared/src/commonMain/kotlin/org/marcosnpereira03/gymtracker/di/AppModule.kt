@@ -9,20 +9,25 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
 import org.marcosnpereira03.gymtracker.data.remote.SupabaseClientFactory
+import org.marcosnpereira03.gymtracker.data.remote.gemini.GeminiApiClient
+import org.marcosnpereira03.gymtracker.data.repository.AiCoachRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.AuthRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.ExerciseRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.ProfileRepositoryImpl
 import org.marcosnpereira03.gymtracker.data.repository.WorkoutRepositoryImpl
+import org.marcosnpereira03.gymtracker.domain.repository.AiCoachRepository
 import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
+import org.marcosnpereira03.gymtracker.domain.usecase.BuildAiUserDataContextUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateMuscleGroupVolumeUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateOneRepMaxUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.GetExerciseHistoryUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.GetPersonalRecordsUseCase
 import org.marcosnpereira03.gymtracker.presentation.auth.AuthViewModel
+import org.marcosnpereira03.gymtracker.presentation.coach.AiCoachViewModel
 import org.marcosnpereira03.gymtracker.presentation.exercises.ExercisesViewModel
 import org.marcosnpereira03.gymtracker.presentation.history.HistoryViewModel
 import org.marcosnpereira03.gymtracker.presentation.home.HomeViewModel
@@ -34,6 +39,7 @@ import org.marcosnpereira03.gymtracker.presentation.workout.WorkoutSessionViewMo
  */
 val networkModule = module {
     single { SupabaseClientFactory.create() }
+    single { GeminiApiClient() }
 }
 
 /**
@@ -44,6 +50,7 @@ val repositoryModule = module {
     singleOf(::ExerciseRepositoryImpl) { bind<ExerciseRepository>() }
     singleOf(::WorkoutRepositoryImpl) { bind<WorkoutRepository>() }
     singleOf(::ProfileRepositoryImpl) { bind<ProfileRepository>() }
+    singleOf(::AiCoachRepositoryImpl) { bind<AiCoachRepository>() }
 }
 
 /**
@@ -55,6 +62,7 @@ val useCaseModule = module {
     factoryOf(::CalculateMuscleGroupVolumeUseCase)
     factoryOf(::GetExerciseHistoryUseCase)
     factoryOf(::GetPersonalRecordsUseCase)
+    factoryOf(::BuildAiUserDataContextUseCase)
 }
 
 /**
@@ -63,11 +71,14 @@ val useCaseModule = module {
 val viewModelModule = module {
     viewModelOf(::AuthViewModel)
     viewModelOf(::HomeViewModel)
-    singleOf(::WorkoutSessionViewModel)
+    viewModelOf(::WorkoutSessionViewModel)
     viewModelOf(::HistoryViewModel)
     viewModelOf(::ExercisesViewModel)
     viewModelOf(::ProfileViewModel)
+    viewModelOf(::AiCoachViewModel)
 }
+
+
 
 /**
  * Lista consolidada de módulos de Koin para la aplicación multiplataforma.

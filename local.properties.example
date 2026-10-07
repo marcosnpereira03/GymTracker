@@ -1,0 +1,12 @@
+## Plantilla de configuración local y variables de entorno para GymTracker
+## Copiar este archivo como 'local.properties' en la raíz del proyecto y completar con las claves correspondientes.
+
+# SDK de Android
+# sdk.dir=/ruta/a/tu/Android/Sdk
+
+# API Key de Google Gemini (Obtenible gratis en https://aistudio.google.com/app/apikey)
+GEMINI_API_KEY=tu_clave_de_gemini_aqui
+
+# Conexión a Supabase (URL y anonKey de tu proyecto en Supabase)
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_ANON_KEY=tu_supabase_anon_key_aqui

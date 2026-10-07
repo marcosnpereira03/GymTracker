@@ -4,13 +4,14 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
+import org.marcosnpereira03.gymtracker.config.AppConfig
 
 /**
- * Parámetros de configuración de conexión a Supabase.
+ * Parámetros de configuración de conexión a Supabase cargados desde AppConfig.
  */
 object SupabaseConfig {
-    const val DEFAULT_URL = "https://osuvwawiukckemqxbqsc.supabase.co"
-    const val DEFAULT_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdXZ3YXdpdWtja2VtcXhicXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTg4OTgsImV4cCI6MjEwNjc5NDg5OH0.TTDJpMBDnXfmOwzlCgY1tp63bNQK44l9JwSTihFv5O4"
+    val DEFAULT_URL: String = AppConfig.SUPABASE_URL
+    val DEFAULT_ANON_KEY: String = AppConfig.SUPABASE_ANON_KEY
 }
 
 /**
@@ -31,4 +32,3 @@ object SupabaseClientFactory {
         }
     }
 }
-

@@ -20,9 +20,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.savedstate.read
 import org.koin.compose.viewmodel.koinViewModel
 import org.marcosnpereira03.gymtracker.presentation.auth.AuthScreen
 import org.marcosnpereira03.gymtracker.presentation.auth.AuthViewModel
+import org.marcosnpereira03.gymtracker.presentation.coach.AiCoachScreen
+import org.marcosnpereira03.gymtracker.presentation.coach.AiCoachViewModel
 import org.marcosnpereira03.gymtracker.presentation.exercises.ExercisesScreen
 import org.marcosnpereira03.gymtracker.presentation.exercises.ExercisesViewModel
 import org.marcosnpereira03.gymtracker.presentation.history.HistoryScreen
@@ -144,6 +147,9 @@ fun AppNavigation() {
                             restoreState = true
                         }
                     },
+                    onNavigateToCoach = {
+                        navController.navigate(Screen.AiCoach.route)
+                    },
                     onNavigateToHistory = {
                         navController.navigate(Screen.History.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -187,12 +193,21 @@ fun AppNavigation() {
                     }
                 )
             ) { backStackEntry ->
-                val rawWorkoutId = backStackEntry.arguments?.getString("workoutId")
-                val rawDate = backStackEntry.arguments?.getString("date")
+                val rawWorkoutId = runCatching {
+                    backStackEntry.arguments?.read {
+                        if (contains("workoutId")) getString("workoutId") else null
+                    }
+                }.getOrNull()
+                val rawDate = runCatching {
+                    backStackEntry.arguments?.read {
+                        if (contains("date")) getString("date") else null
+                    }
+                }.getOrNull()
                 val workoutId = if (rawWorkoutId.isNullOrBlank() || rawWorkoutId == "{workoutId}") null else rawWorkoutId
                 val date = if (rawDate.isNullOrBlank() || rawDate == "{date}") null else rawDate
                 val viewModel = koinViewModel<WorkoutSessionViewModel>()
                 WorkoutSessionScreen(
+
                     viewModel = viewModel,
                     workoutId = workoutId,
                     initialDate = date,
@@ -242,6 +257,17 @@ fun AppNavigation() {
                     },
                     onNavigateToAuth = {
                         navController.navigate(Screen.Auth.route)
+                    }
+                )
+            }
+
+            // 6. Pantalla Coach de IA (Google Gemini Chatbot)
+            composable(Screen.AiCoach.route) {
+                val viewModel = koinViewModel<AiCoachViewModel>()
+                AiCoachScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
                     }
                 )
             }
