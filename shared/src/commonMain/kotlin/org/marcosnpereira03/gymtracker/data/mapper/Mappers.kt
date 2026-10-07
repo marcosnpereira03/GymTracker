@@ -19,7 +19,8 @@ fun ExerciseDto.toDomain(): Exercise {
     return Exercise(
         id = id,
         name = name,
-        muscleGroup = muscleGroup
+        muscleGroup = muscleGroup,
+        equipment = equipment
     )
 }
 
@@ -28,9 +29,11 @@ fun Exercise.toDto(userId: String? = null): ExerciseDto {
         id = id,
         userId = userId,
         name = name,
-        muscleGroup = muscleGroup
+        muscleGroup = muscleGroup,
+        equipment = equipment
     )
 }
+
 
 // WorkoutSet Mappers
 fun WorkoutSetDto.toDomain(): WorkoutSet {

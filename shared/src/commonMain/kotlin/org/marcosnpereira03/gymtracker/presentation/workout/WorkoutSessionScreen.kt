@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,6 +81,19 @@ fun WorkoutSessionScreen(
             viewModel = viewModel,
             exerciseId = state.viewingHistoryExerciseId!!,
             onDismiss = { viewModel.onCloseExerciseHistory() }
+        )
+    }
+
+    // Modal Selector de Ejercicios con buscador y filtros
+    if (showExercisePicker) {
+        ExercisePickerDialog(
+            exercises = state.availableExercises,
+            onSelectExercise = { exercise ->
+                viewModel.onSelectExercise(exercise)
+                viewModel.onAddSet()
+                showExercisePicker = false
+            },
+            onDismiss = { showExercisePicker = false }
         )
     }
 
@@ -403,6 +419,7 @@ fun WorkoutSessionScreen(
                         val exerciseObj = state.availableExercises.firstOrNull { it.id == exerciseId }
                         val exerciseName = exerciseSets.firstOrNull()?.exerciseName ?: exerciseObj?.name ?: "Ejercicio"
                         val muscleGroup = exerciseObj?.muscleGroup ?: "Pecho"
+                        val equipment = exerciseObj?.equipment
 
                         val exerciseIndex = distinctExerciseIds.indexOf(exerciseId)
                         val canMoveUp = exerciseIndex > 0
@@ -413,6 +430,7 @@ fun WorkoutSessionScreen(
                             exerciseId = exerciseId,
                             exerciseName = exerciseName,
                             muscleGroup = muscleGroup,
+                            equipment = equipment,
                             sets = exerciseSets,
                             canMoveUp = canMoveUp,
                             canMoveDown = canMoveDown,
@@ -431,15 +449,13 @@ fun WorkoutSessionScreen(
 
                 // Botón "+ Añadir Ejercicio a la Sesión"
                 item {
-                    var pickerExpanded by remember { mutableStateOf(false) }
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(Zinc900)
                             .border(1.dp, Zinc800, RoundedCornerShape(14.dp))
-                            .clickable { pickerExpanded = true }
+                            .clickable { showExercisePicker = true }
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -458,28 +474,6 @@ fun WorkoutSessionScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-
-                        DropdownMenu(
-                            expanded = pickerExpanded,
-                            onDismissRequest = { pickerExpanded = false },
-                            modifier = Modifier.background(Zinc900)
-                        ) {
-                            state.availableExercises.forEach { exercise ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(exercise.name, color = White, fontWeight = FontWeight.Medium)
-                                            Text(exercise.muscleGroup, color = Zinc400, fontSize = 11.sp)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.onSelectExercise(exercise)
-                                        viewModel.onAddSet()
-                                        pickerExpanded = false
-                                    }
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -492,6 +486,7 @@ fun ExerciseWorkoutCard(
     exerciseId: String,
     exerciseName: String,
     muscleGroup: String,
+    equipment: String? = null,
     sets: List<EditableSet>,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
@@ -526,14 +521,16 @@ fun ExerciseWorkoutCard(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Zinc800)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text("Mancuernas", color = Zinc400, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    if (!equipment.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Zinc800)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(equipment, color = Zinc400, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
 
@@ -1197,4 +1194,263 @@ fun CompactSetRow(
         }
     }
 }
+
+/**
+ * Modal de selección de ejercicios con buscador en tiempo real, filtros por grupo muscular y etiquetas de equipamiento.
+ */
+@Composable
+fun ExercisePickerDialog(
+    exercises: List<Exercise>,
+    onSelectExercise: (Exercise) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedMuscleGroup by remember { mutableStateOf("Todos") }
+
+    val defaultMuscleGroups = listOf("Todos", "Pecho", "Espalda", "Cuádriceps", "Isquios", "Glúteos", "Hombros", "Bíceps", "Tríceps", "Abdomen", "Piernas")
+    val dynamicGroups = remember(exercises) {
+        val extracted = exercises.map { it.muscleGroup.trim() }.filter { it.isNotBlank() }.distinct()
+        (listOf("Todos") + extracted).distinct()
+    }
+    val muscleCategories = if (dynamicGroups.size > 1) dynamicGroups else defaultMuscleGroups
+
+    val filteredExercises = remember(exercises, searchQuery, selectedMuscleGroup) {
+        exercises.filter { ex ->
+            val matchesSearch = searchQuery.isBlank() ||
+                    ex.name.contains(searchQuery, ignoreCase = true) ||
+                    ex.muscleGroup.contains(searchQuery, ignoreCase = true) ||
+                    (ex.equipment?.contains(searchQuery, ignoreCase = true) == true)
+
+            val matchesMuscle = selectedMuscleGroup.equals("Todos", ignoreCase = true) ||
+                    ex.muscleGroup.equals(selectedMuscleGroup, ignoreCase = true)
+
+            matchesSearch && matchesMuscle
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.85f)
+                .padding(vertical = 16.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Zinc900),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(18.dp)
+            ) {
+                // Header: Ícono + Título + Botón ✕
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            tint = Emerald400,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Seleccionar Ejercicio",
+                            color = White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cerrar",
+                            tint = Zinc400,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Buscador
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Buscar por nombre...", color = Zinc500, fontSize = 14.sp) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Zinc500,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { searchQuery = "" },
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Borrar búsqueda",
+                                    tint = Zinc400,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = White,
+                        unfocusedTextColor = White,
+                        focusedBorderColor = Emerald400,
+                        unfocusedBorderColor = Zinc800,
+                        focusedContainerColor = Zinc950,
+                        unfocusedContainerColor = Zinc950
+                    ),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Filtros de grupo muscular (Chips horizontales con scroll)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(items = muscleCategories) { muscle ->
+                        val isSelected = selectedMuscleGroup.equals(muscle, ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (isSelected) Emerald400 else Zinc800)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) Emerald500 else Zinc700,
+                                    RoundedCornerShape(20.dp)
+                                )
+                                .clickable { selectedMuscleGroup = muscle }
+                                .padding(horizontal = 14.dp, vertical = 7.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = muscle,
+                                color = if (isSelected) Color.Black else Zinc300,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Lista de ejercicios scrolleable
+                if (filteredExercises.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No se encontraron ejercicios con ese criterio",
+                            color = Zinc500,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(items = filteredExercises, key = { it.id }) { exercise ->
+                            ExercisePickerItemCard(
+                                exercise = exercise,
+                                onClick = { onSelectExercise(exercise) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExercisePickerItemCard(
+    exercise: Exercise,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Zinc950),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = exercise.name.uppercase(),
+                    color = White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.3.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = exercise.muscleGroup,
+                    color = Zinc400,
+                    fontSize = 12.sp
+                )
+            }
+
+            if (!exercise.equipment.isNullOrBlank()) {
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Zinc800)
+                        .border(1.dp, Zinc700, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = exercise.equipment,
+                        color = Zinc300,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
 
