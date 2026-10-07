@@ -17,6 +17,21 @@ interface AiCoachRepository {
     ): Result<String>
 
     /**
+     * Obtiene el historial completo de mensajes de la conversación actual.
+     */
+    fun getConversationHistory(): List<ChatMessage>
+
+    /**
+     * Guarda o actualiza el historial de mensajes de la conversación.
+     */
+    fun saveConversationHistory(messages: List<ChatMessage>)
+
+    /**
+     * Limpia el historial de la conversación.
+     */
+    fun clearConversationHistory()
+
+    /**
      * Obtiene la clave de API activa configurada.
      */
     fun getApiKey(): String

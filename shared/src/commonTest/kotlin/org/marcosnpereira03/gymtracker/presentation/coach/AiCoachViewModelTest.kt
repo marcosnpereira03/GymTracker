@@ -22,6 +22,7 @@ class AiCoachViewModelTest {
 
     private class FakeAiCoachRepository : AiCoachRepository {
         private var storedApiKey: String = "test-api-key"
+        private val storedHistory = mutableListOf<ChatMessage>()
         var lastPrompt: String? = null
         var lastHistoryCount: Int = 0
         var shouldFail: Boolean = false
@@ -41,6 +42,17 @@ class AiCoachViewModelTest {
             }
         }
 
+        override fun getConversationHistory(): List<ChatMessage> = storedHistory.toList()
+
+        override fun saveConversationHistory(messages: List<ChatMessage>) {
+            storedHistory.clear()
+            storedHistory.addAll(messages)
+        }
+
+        override fun clearConversationHistory() {
+            storedHistory.clear()
+        }
+
         override fun getApiKey(): String = storedApiKey
         override fun setApiKey(apiKey: String) {
             this.storedApiKey = apiKey
@@ -48,6 +60,7 @@ class AiCoachViewModelTest {
     }
 
     private lateinit var fakeRepo: FakeAiCoachRepository
+    private lateinit var buildContextUseCase: BuildAiUserDataContextUseCase
     private lateinit var viewModel: AiCoachViewModel
 
     @BeforeTest
@@ -83,7 +96,7 @@ class AiCoachViewModelTest {
             override suspend fun updateProfile(username: String, avatarUrl: String?): Result<AuthUser> = Result.success(AuthUser("u1", "test@test.com", username))
         }
 
-        val buildContextUseCase = BuildAiUserDataContextUseCase(
+        buildContextUseCase = BuildAiUserDataContextUseCase(
             exerciseRepository = fakeExerciseRepo,
             workoutRepository = fakeWorkoutRepo,
             profileRepository = fakeProfileRepo,
@@ -110,7 +123,7 @@ class AiCoachViewModelTest {
     }
 
     @Test
-    fun `sends message and appends user and coach messages to state`() = runTest(testDispatcher) {
+    fun `sends message and appends user and coach messages to state and repository`() = runTest(testDispatcher) {
         viewModel.onInputTextChanged("¿Cómo mejorar mi press banca?")
         viewModel.sendMessage()
 
@@ -124,10 +137,29 @@ class AiCoachViewModelTest {
         assertEquals(MessageSender.COACH, state.messages[2].sender)
         assertEquals("Respuesta del Coach: ¡Excelente progreso!", state.messages[2].text)
         assertEquals(1, fakeRepo.lastHistoryCount) // 1 previous message passed as history
+
+        // Verificar persistencia en el repositorio
+        assertEquals(3, fakeRepo.getConversationHistory().size)
     }
 
     @Test
-    fun `clears chat and resets conversation`() = runTest(testDispatcher) {
+    fun `restores existing conversation when entering the screen again`() = runTest(testDispatcher) {
+        viewModel.onInputTextChanged("Mensaje persistente")
+        viewModel.sendMessage()
+        advanceUntilIdle()
+
+        // Simular salida y reingreso creando un nuevo ViewModel con el mismo repo
+        val reenteredViewModel = AiCoachViewModel(
+            aiCoachRepository = fakeRepo,
+            buildAiUserDataContextUseCase = buildContextUseCase
+        )
+
+        assertEquals(3, reenteredViewModel.uiState.value.messages.size)
+        assertEquals("Mensaje persistente", reenteredViewModel.uiState.value.messages[1].text)
+    }
+
+    @Test
+    fun `clears chat and resets conversation in state and repository`() = runTest(testDispatcher) {
         viewModel.onInputTextChanged("Hola")
         viewModel.sendMessage()
         advanceUntilIdle()
@@ -138,15 +170,6 @@ class AiCoachViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(1, state.messages.size)
         assertEquals(MessageSender.COACH, state.messages.first().sender)
-    }
-
-    @Test
-    fun `updates and saves api key`() {
-        viewModel.onApiKeyInputChanged("new-secret-key")
-        viewModel.saveApiKey()
-
-        assertEquals("new-secret-key", viewModel.uiState.value.apiKey)
-        assertEquals("new-secret-key", fakeRepo.getApiKey())
-        assertFalse(viewModel.uiState.value.showApiKeyDialog)
+        assertEquals(1, fakeRepo.getConversationHistory().size)
     }
 }

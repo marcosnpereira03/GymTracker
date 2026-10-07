@@ -7,10 +7,13 @@ import org.marcosnpereira03.gymtracker.domain.repository.AiCoachRepository
 
 /**
  * Implementación del repositorio del Coach de IA consumiendo la API de Google Gemini.
+ * Mantiene el historial de la conversación en memoria para persistencia entre navegaciones.
  */
 class AiCoachRepositoryImpl(
     private val geminiApiClient: GeminiApiClient = GeminiApiClient()
 ) : AiCoachRepository {
+
+    private val cachedMessages = mutableListOf<ChatMessage>()
 
     override suspend fun sendMessage(
         userPrompt: String,
@@ -65,6 +68,19 @@ class AiCoachRepositoryImpl(
             request = request,
             apiKey = activeKey
         )
+    }
+
+    override fun getConversationHistory(): List<ChatMessage> {
+        return cachedMessages.toList()
+    }
+
+    override fun saveConversationHistory(messages: List<ChatMessage>) {
+        cachedMessages.clear()
+        cachedMessages.addAll(messages)
+    }
+
+    override fun clearConversationHistory() {
+        cachedMessages.clear()
     }
 
     override fun getApiKey(): String = GeminiConfig.apiKey

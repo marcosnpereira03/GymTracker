@@ -16,6 +16,8 @@ import kotlin.random.Random
 
 /**
  * ViewModel que gestiona el estado y la comunicación con el Coach de IA de Google Gemini.
+ * Recupera y persiste los mensajes en el repositorio para mantener la conversación activa
+ * incluso al salir y volver a entrar a la pantalla.
  */
 class AiCoachViewModel(
     private val aiCoachRepository: AiCoachRepository,
@@ -27,18 +29,28 @@ class AiCoachViewModel(
 
     init {
         val currentKey = aiCoachRepository.getApiKey()
+        val existingHistory = aiCoachRepository.getConversationHistory()
+
+        val initialMessages = if (existingHistory.isNotEmpty()) {
+            existingHistory
+        } else {
+            val greeting = listOf(
+                ChatMessage(
+                    id = generateId(),
+                    text = "¡Hola! Soy tu Coach de Inteligencia Artificial. Tengo acceso a tu catálogo de ejercicios y a tus entrenamientos recientes. ¿En qué puedo ayudarte hoy?",
+                    sender = MessageSender.COACH,
+                    timestamp = DateTimeUtil.now()
+                )
+            )
+            aiCoachRepository.saveConversationHistory(greeting)
+            greeting
+        }
+
         _uiState.update {
             it.copy(
                 apiKey = currentKey,
                 apiKeyInput = currentKey,
-                messages = listOf(
-                    ChatMessage(
-                        id = generateId(),
-                        text = "¡Hola! Soy tu Coach de Inteligencia Artificial impulsado por Google Gemini. Tengo acceso a tu catálogo de ejercicios y a tus entrenamientos recientes. ¿En qué puedo ayudarte hoy?",
-                        sender = MessageSender.COACH,
-                        timestamp = DateTimeUtil.now()
-                    )
-                )
+                messages = initialMessages
             )
         }
     }
@@ -68,16 +80,18 @@ class AiCoachViewModel(
     }
 
     fun clearChat() {
+        val resetMessages = listOf(
+            ChatMessage(
+                id = generateId(),
+                text = "Conversación reiniciada. ¿Qué consulta o análisis te gustaría realizar?",
+                sender = MessageSender.COACH,
+                timestamp = DateTimeUtil.now()
+            )
+        )
+        aiCoachRepository.saveConversationHistory(resetMessages)
         _uiState.update {
             it.copy(
-                messages = listOf(
-                    ChatMessage(
-                        id = generateId(),
-                        text = "Conversación reiniciada. ¿Qué consulta o análisis te gustaría realizar?",
-                        sender = MessageSender.COACH,
-                        timestamp = DateTimeUtil.now()
-                    )
-                ),
+                messages = resetMessages,
                 errorMessage = null
             )
         }
@@ -94,11 +108,14 @@ class AiCoachViewModel(
             timestamp = DateTimeUtil.now()
         )
 
+        val updatedMessagesWithUser = _uiState.value.messages + userMessage
+        aiCoachRepository.saveConversationHistory(updatedMessagesWithUser)
+
         // Limpiar input y agregar mensaje del usuario
         _uiState.update { state ->
             state.copy(
                 inputText = "",
-                messages = state.messages + userMessage,
+                messages = updatedMessagesWithUser,
                 isLoading = true,
                 errorMessage = null
             )
@@ -110,7 +127,7 @@ class AiCoachViewModel(
                 val userDataContext = buildAiUserDataContextUseCase()
 
                 // 2. Enviar a Gemini incluyendo la memoria conversacional previa (últimos 10 mensajes)
-                val history = _uiState.value.messages.dropLast(1) // Todo el historial anterior al mensaje actual
+                val history = _uiState.value.messages.dropLast(1)
                 val result = aiCoachRepository.sendMessage(
                     userPrompt = query,
                     conversationHistory = history,
@@ -126,9 +143,12 @@ class AiCoachViewModel(
                             sender = MessageSender.COACH,
                             timestamp = DateTimeUtil.now()
                         )
+                        val finalMessages = _uiState.value.messages + coachMessage
+                        aiCoachRepository.saveConversationHistory(finalMessages)
+
                         _uiState.update { state ->
                             state.copy(
-                                messages = state.messages + coachMessage,
+                                messages = finalMessages,
                                 isLoading = false,
                                 errorMessage = null
                             )
@@ -143,9 +163,12 @@ class AiCoachViewModel(
                             timestamp = DateTimeUtil.now(),
                             isError = true
                         )
+                        val finalMessages = _uiState.value.messages + errorCoachMessage
+                        aiCoachRepository.saveConversationHistory(finalMessages)
+
                         _uiState.update { state ->
                             state.copy(
-                                messages = state.messages + errorCoachMessage,
+                                messages = finalMessages,
                                 isLoading = false,
                                 errorMessage = errorText
                             )

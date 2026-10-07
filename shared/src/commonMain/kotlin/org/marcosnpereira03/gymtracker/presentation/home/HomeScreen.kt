@@ -233,7 +233,7 @@ fun HomeScreen(
                     }
                 }
 
-                // Banner interactivo: Coach IA con Google Gemini
+                // Banner interactivo: Coach de IA (Chatbot Inteligente)
                 item {
                     Card(
                         modifier = Modifier
@@ -246,67 +246,49 @@ fun HomeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Emerald600, Emerald400)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Zinc950,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Emerald600, Emerald400)
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = Zinc950,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "Coach de IA",
-                                            color = White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(Emerald950)
-                                                .border(1.dp, Emerald500.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "Gemini",
-                                                color = Emerald400,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Consulta tu progreso y rutinas personalizadas",
-                                        color = Zinc400,
-                                        fontSize = 12.sp
-                                    )
-                                }
+                                Text(
+                                    text = "Coach de IA",
+                                    color = White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Consulta tu progreso y rutinas personalizadas",
+                                    color = Zinc400,
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp
+                                )
                             }
+
+                            Spacer(modifier = Modifier.width(8.dp))
 
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -317,6 +299,7 @@ fun HomeScreen(
                         }
                     }
                 }
+
 
                 // KPI Cards Grid (Peso Corporal + Historial)
 

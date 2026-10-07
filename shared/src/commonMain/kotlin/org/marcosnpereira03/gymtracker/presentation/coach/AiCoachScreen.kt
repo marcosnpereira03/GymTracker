@@ -79,29 +79,12 @@ fun AiCoachScreen(
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Coach IA",
-                                    color = White,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Emerald950)
-                                        .border(1.dp, Emerald500.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "Gemini",
-                                        color = Emerald400,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "Coach IA",
+                                color = White,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                             Text(
                                 text = "Entrenador Personal Inteligente",
                                 color = Zinc400,
@@ -120,13 +103,6 @@ fun AiCoachScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.showApiKeyDialog(true) }) {
-                        Icon(
-                            imageVector = Icons.Default.Key,
-                            contentDescription = "Configurar API Key",
-                            tint = if (state.apiKey.isBlank()) Emerald400 else Zinc400
-                        )
-                    }
                     IconButton(onClick = { viewModel.clearChat() }) {
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
@@ -147,44 +123,7 @@ fun AiCoachScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Banner informativo de API Key si está vacía
-            if (state.apiKey.isBlank()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable { viewModel.showApiKeyDialog(true) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Emerald500.copy(alpha = 0.6f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Key,
-                            contentDescription = null,
-                            tint = Emerald400,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Configurar API Key de Gemini",
-                                color = White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Toca aquí para ingresar tu clave gratuita de Google AI Studio.",
-                                color = Zinc400,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                }
-            }
+
 
             // Lista de mensajes del Chat
             LazyColumn(
