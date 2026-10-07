@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.marcosnpereira03.gymtracker.domain.model.Workout
@@ -92,8 +93,11 @@ fun HomeScreen(
                             Text(
                                 text = DateTimeUtil.formatHeaderDate(),
                                 color = White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f).padding(end = 8.dp)
                             )
 
                             if (state.currentUser == null) {
@@ -104,7 +108,7 @@ fun HomeScreen(
                                         .background(Emerald950.copy(alpha = 0.5f))
                                         .border(1.dp, Emerald500.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                                         .clickable { onNavigateToAuth() }
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
@@ -118,7 +122,9 @@ fun HomeScreen(
                                         text = "Ingresar",
                                         color = Emerald400,
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                 }
                             } else {
@@ -143,11 +149,14 @@ fun HomeScreen(
                                         text = "Salir",
                                         color = Zinc400,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                 }
                             }
                         }
+
                     }
                 }
 

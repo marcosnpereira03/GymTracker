@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -46,31 +45,7 @@ fun AuthScreen(
     }
 
     Scaffold(
-        containerColor = Zinc950,
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Zinc900)
-                        .border(1.dp, Zinc800, RoundedCornerShape(8.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
+        containerColor = Zinc950
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -79,6 +54,7 @@ fun AuthScreen(
                 .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center
         ) {
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,

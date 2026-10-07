@@ -36,6 +36,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -239,7 +240,9 @@ fun WorkoutSessionScreen(
                                 color = White,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f).padding(end = 8.dp)
                             )
 
                             // Date Badge Pill
@@ -263,10 +266,13 @@ fun WorkoutSessionScreen(
                                     text = dateStr,
                                     color = White,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
+
                     }
                 }
 
@@ -581,7 +587,7 @@ fun ExerciseWorkoutCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Banner de Última Vez (Historial rápido y trigger para Ver más)
+            // Banner de Última Vez (Historial rápido estructurado en 2 filas y Ver más a la derecha)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -589,43 +595,62 @@ fun ExerciseWorkoutCard(
                     .background(Zinc950)
                     .border(1.dp, Zinc800, RoundedCornerShape(8.dp))
                     .clickable { onOpenHistory() }
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f, fill = false)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        tint = Emerald400,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = Emerald400,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (lastSessionSummary != null) "Última vez (${lastSessionSummary.first}):" else "Sin registros anteriores",
+                            color = Zinc400,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
                     if (lastSessionSummary != null) {
-                        Text("Última vez (${lastSessionSummary.first}): ", color = Zinc400, fontSize = 11.sp)
-                        Text(lastSessionSummary.second, color = Emerald400, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    } else {
-                        Text("Sin registros anteriores", color = Zinc400, fontSize = 11.sp)
+                        Text(
+                            text = lastSessionSummary.second,
+                            color = Emerald400,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 18.dp)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onOpenHistory() }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Emerald950.copy(alpha = 0.35f))
+                        .border(1.dp, Emerald500.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "Ver más ↗",
                         color = Emerald400,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
