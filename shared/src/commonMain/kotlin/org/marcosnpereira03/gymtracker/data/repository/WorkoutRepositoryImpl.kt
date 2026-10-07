@@ -77,16 +77,18 @@ class WorkoutRepositoryImpl(
                     dto.toDomain(sets)
                 }
 
+                val sortedWorkouts = remoteWorkouts.reversed().sortedByDescending { it.date }
+
                 if (remoteWorkouts.isNotEmpty()) {
                     inMemoryWorkouts.clear()
-                    inMemoryWorkouts.addAll(remoteWorkouts)
-                    remoteWorkouts.sortedByDescending { it.date }
+                    inMemoryWorkouts.addAll(sortedWorkouts)
+                    sortedWorkouts
                 } else {
-                    inMemoryWorkouts.sortedByDescending { it.date }
+                    inMemoryWorkouts.reversed().sortedByDescending { it.date }
                 }
             } catch (e: Exception) {
                 println("Error fetching workouts from Supabase: ${e.message}")
-                inMemoryWorkouts.sortedByDescending { it.date }
+                inMemoryWorkouts.reversed().sortedByDescending { it.date }
             }
         }
     }

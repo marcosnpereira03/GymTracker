@@ -35,16 +35,18 @@ class ProfileRepositoryImpl(
                     .decodeList<BodyWeightLogDto>()
                     .map { it.toDomain() }
 
+                val sortedLogs = remoteLogs.reversed().sortedByDescending { it.date }
+
                 if (remoteLogs.isNotEmpty()) {
                     inMemoryLogs.clear()
-                    inMemoryLogs.addAll(remoteLogs)
-                    remoteLogs.sortedByDescending { it.date }
+                    inMemoryLogs.addAll(sortedLogs)
+                    sortedLogs
                 } else {
-                    inMemoryLogs.sortedByDescending { it.date }
+                    inMemoryLogs.reversed().sortedByDescending { it.date }
                 }
             } catch (e: Exception) {
                 println("Error fetching body weight logs from Supabase: ${e.message}")
-                inMemoryLogs.sortedByDescending { it.date }
+                inMemoryLogs.reversed().sortedByDescending { it.date }
             }
         }
     }
