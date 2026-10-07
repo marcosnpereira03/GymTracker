@@ -50,6 +50,7 @@ import org.marcosnpereira03.gymtracker.domain.model.PersonalRecord
 import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1076,7 +1077,8 @@ fun WeightEvolutionChartCard(
 
 /**
  * Canvas nativo de Compose que dibuja la línea de progreso de peso,
- * puntos de control brillantes, líneas guía y etiquetas de fechas.
+ * eje vertical Y con escala de peso en kg, puntos de control brillantes,
+ * líneas guía horizontales y eje X de fechas.
  */
 @Composable
 fun WeightLineChart(
@@ -1088,129 +1090,189 @@ fun WeightLineChart(
     val textMutedColor = Zinc500
 
     val weights = remember(logs) { logs.map { it.weightKg } }
-    val minWeight = remember(weights) { (weights.minOrNull() ?: 50.0) - 0.5 }
-    val maxWeight = remember(weights) { (weights.maxOrNull() ?: 100.0) + 0.5 }
-    val weightRange = if (maxWeight - minWeight > 0) maxWeight - minWeight else 1.0
+    val rawMin = remember(weights) { weights.minOrNull() ?: 50.0 }
+    val rawMax = remember(weights) { weights.maxOrNull() ?: 100.0 }
+
+    // Rango mínimo para evitar división por cero o curvas planas
+    val (minWeight, maxWeight) = remember(rawMin, rawMax) {
+        if (rawMax - rawMin < 1.0) {
+            Pair((rawMin - 1.0).coerceAtLeast(0.0), rawMax + 1.0)
+        } else {
+            Pair((rawMin - 0.5).coerceAtLeast(0.0), rawMax + 0.5)
+        }
+    }
+    val weightRange = maxWeight - minWeight
+
+    val lineCount = 3 // 4 marcas: max, 2/3, 1/3, min
+    val yAxisLabels = remember(minWeight, maxWeight) {
+        (0..lineCount).map { i ->
+            val w = maxWeight - (weightRange / lineCount) * i
+            val rounded = (w * 10.0).roundToInt() / 10.0
+            if (rounded % 1.0 == 0.0) "${rounded.toInt()} kg" else "$rounded kg"
+        }
+    }
+
+    val dateLabels = remember(logs) {
+        if (logs.size <= 4) logs.map { DateTimeUtil.formatShortDate(it.date) }
+        else listOf(
+            DateTimeUtil.formatShortDate(logs.first().date),
+            DateTimeUtil.formatShortDate(logs[logs.size / 2].date),
+            DateTimeUtil.formatShortDate(logs.last().date)
+        )
+    }
 
     Column(modifier = modifier) {
-        Canvas(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            val width = size.width
-            val height = size.height
-            val paddingH = 16f
-            val paddingV = 16f
-            val chartWidth = width - (paddingH * 2)
-            val chartHeight = height - (paddingV * 2)
-
-            // Líneas guía horizontales punteadas
-            val lineCount = 3
-            for (i in 0..lineCount) {
-                val y = paddingV + (chartHeight / lineCount) * i
-                drawLine(
-                    color = gridLineColor,
-                    start = Offset(paddingH, y),
-                    end = Offset(width - paddingH, y),
-                    strokeWidth = 1.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                )
+        // Fila Principal: Eje Y a la izquierda + Gráfico Canvas a la derecha
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            // Eje Vertical Y (Escala de pesos)
+            Column(
+                modifier = Modifier
+                    .width(46.dp)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                yAxisLabels.forEach { label ->
+                    Text(
+                        text = label,
+                        color = textMutedColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
+                }
             }
 
-            // Calcular coordenadas de los puntos
-            val points = logs.mapIndexed { index, log ->
-                val x = paddingH + (chartWidth / (logs.size - 1).coerceAtLeast(1)) * index
-                val normalizedY = ((log.weightKg - minWeight) / weightRange).toFloat()
-                val y = height - paddingV - (normalizedY * chartHeight)
-                Offset(x, y)
-            }
+            Spacer(modifier = Modifier.width(8.dp))
 
-            if (points.isNotEmpty()) {
-                // 1. Path de degradado de fondo
-                val fillPath = Path().apply {
-                    moveTo(points.first().x, height - paddingV)
-                    lineTo(points.first().x, points.first().y)
-                    for (i in 1 until points.size) {
-                        val p0 = points[i - 1]
-                        val p1 = points[i]
-                        val cx = (p0.x + p1.x) / 2
-                        cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
-                    }
-                    lineTo(points.last().x, height - paddingV)
-                    close()
+            // Área de dibujo del gráfico Canvas
+            Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                val width = size.width
+                val height = size.height
+                val paddingH = 8f
+                val paddingV = 6f
+                val chartWidth = width - (paddingH * 2)
+                val chartHeight = height - (paddingV * 2)
+
+                // Líneas guía horizontales punteadas coincidentes con las etiquetas del eje Y
+                for (i in 0..lineCount) {
+                    val y = paddingV + (chartHeight / lineCount) * i
+                    drawLine(
+                        color = gridLineColor,
+                        start = Offset(0f, y),
+                        end = Offset(width, y),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
+                    )
                 }
 
-                drawPath(
-                    path = fillPath,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            emeraldColor.copy(alpha = 0.35f),
-                            emeraldColor.copy(alpha = 0.05f),
-                            Color.Transparent
+                // Calcular coordenadas (x, y) de los puntos de pesaje
+                val points = logs.mapIndexed { index, log ->
+                    val x = paddingH + (chartWidth / (logs.size - 1).coerceAtLeast(1)) * index
+                    val normalizedY = ((log.weightKg - minWeight) / weightRange).toFloat()
+                    val y = height - paddingV - (normalizedY * chartHeight)
+                    Offset(x, y)
+                }
+
+                if (points.isNotEmpty()) {
+                    // 1. Área con degradado bajo la curva
+                    val fillPath = Path().apply {
+                        moveTo(points.first().x, height - paddingV)
+                        lineTo(points.first().x, points.first().y)
+                        for (i in 1 until points.size) {
+                            val p0 = points[i - 1]
+                            val p1 = points[i]
+                            val cx = (p0.x + p1.x) / 2
+                            cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                        }
+                        lineTo(points.last().x, height - paddingV)
+                        close()
+                    }
+
+                    drawPath(
+                        path = fillPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                emeraldColor.copy(alpha = 0.35f),
+                                emeraldColor.copy(alpha = 0.05f),
+                                Color.Transparent
+                            )
                         )
                     )
-                )
 
-                // 2. Path de la línea continua
-                val strokePath = Path().apply {
-                    moveTo(points.first().x, points.first().y)
-                    for (i in 1 until points.size) {
-                        val p0 = points[i - 1]
-                        val p1 = points[i]
-                        val cx = (p0.x + p1.x) / 2
-                        cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                    // 2. Línea suave de la curva
+                    val strokePath = Path().apply {
+                        moveTo(points.first().x, points.first().y)
+                        for (i in 1 until points.size) {
+                            val p0 = points[i - 1]
+                            val p1 = points[i]
+                            val cx = (p0.x + p1.x) / 2
+                            cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                        }
                     }
-                }
 
-                drawPath(
-                    path = strokePath,
-                    color = emeraldColor,
-                    style = Stroke(width = 3.dp.toPx())
-                )
+                    drawPath(
+                        path = strokePath,
+                        color = emeraldColor,
+                        style = Stroke(width = 3.dp.toPx())
+                    )
 
-                // 3. Puntos de datos y halo brillante
-                points.forEachIndexed { idx, pt ->
-                    val isLatest = idx == points.size - 1
-                    if (isLatest) {
+                    // 3. Puntos de datos y halo brillante en el último valor
+                    points.forEachIndexed { idx, pt ->
+                        val isLatest = idx == points.size - 1
+                        if (isLatest) {
+                            drawCircle(
+                                color = emeraldColor.copy(alpha = 0.3f),
+                                radius = 9.dp.toPx(),
+                                center = pt
+                            )
+                        }
                         drawCircle(
-                            color = emeraldColor.copy(alpha = 0.3f),
-                            radius = 9.dp.toPx(),
+                            color = if (isLatest) emeraldColor else Color(0xFFFBBF24),
+                            radius = 4.5.dp.toPx(),
+                            center = pt
+                        )
+                        drawCircle(
+                            color = Color.Black,
+                            radius = 2.dp.toPx(),
                             center = pt
                         )
                     }
-                    drawCircle(
-                        color = if (isLatest) emeraldColor else Color(0xFFFBBF24),
-                        radius = 4.5.dp.toPx(),
-                        center = pt
-                    )
-                    drawCircle(
-                        color = Color.Black,
-                        radius = 2.dp.toPx(),
-                        center = pt
-                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        // Eje de fechas inferior
+        // Fila Inferior: Eje X de fechas alineado con el Canvas
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val dateLabels = remember(logs) {
-                if (logs.size <= 4) logs.map { DateTimeUtil.formatShortDate(it.date) }
-                else listOf(
-                    DateTimeUtil.formatShortDate(logs.first().date),
-                    DateTimeUtil.formatShortDate(logs[logs.size / 2].date),
-                    DateTimeUtil.formatShortDate(logs.last().date)
-                )
-            }
-            dateLabels.forEach { label ->
-                Text(
-                    text = label,
-                    color = textMutedColor,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium
-                )
+            Spacer(modifier = Modifier.width(54.dp)) // Espaciador para compensar el eje Y
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                dateLabels.forEach { label ->
+                    Text(
+                        text = label,
+                        color = textMutedColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
