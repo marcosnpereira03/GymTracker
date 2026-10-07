@@ -483,10 +483,10 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    items(items = state.recentWorkouts.take(3), key = { it.id }) { workout ->
+                    items(items = state.recentWorkouts.take(3), key = { it.workout.id }) { item ->
                         WorkoutSummaryCard(
-                            workout = workout,
-                            onClick = { onWorkoutClick(workout.id) }
+                            item = item,
+                            onClick = { onWorkoutClick(item.workout.id) }
                         )
                     }
                 }
@@ -497,9 +497,10 @@ fun HomeScreen(
 
 @Composable
 fun WorkoutSummaryCard(
-    workout: Workout,
+    item: HomeWorkoutItem,
     onClick: () -> Unit
 ) {
+    val workout = item.workout
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -508,68 +509,105 @@ fun WorkoutSummaryCard(
         colors = CardDefaults.cardColors(containerColor = Zinc900),
         border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(14.dp)
         ) {
+            // Fila superior: Icono + Título & Fecha a la izquierda | Total de series a la derecha
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Zinc800)
-                        .border(1.dp, Emerald500.copy(alpha = 0.3f), CircleShape),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.FitnessCenter,
-                        contentDescription = null,
-                        tint = Emerald400,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Zinc800)
+                            .border(1.dp, Emerald500.copy(alpha = 0.3f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            tint = Emerald400,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
+                        Text(
+                            text = workout.title,
+                            color = White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        val dateStr = workout.date.toString().substringBefore("T")
+                        Text(
+                            text = dateStr,
+                            color = Zinc500,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
+                // Badge de series totales más compacto
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .border(1.dp, Zinc700, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
                     Text(
-                        text = workout.title,
-                        color = White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    val dateStr = workout.date.toString().substringBefore("T")
-                    Text(
-                        text = dateStr,
-                        color = Zinc500,
-                        fontSize = 12.sp
+                        text = "${workout.sets.size} series",
+                        color = Zinc300,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            // Badge de series con fuente monospace y borde
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .border(1.dp, Zinc700, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "${workout.sets.size} series",
-                    color = White,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium
-                )
+            // Filas de ejercicios y series realizadas (ej. "3 x Press Banca Plano")
+            if (item.exercisesSummary.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = Zinc800.copy(alpha = 0.7f), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    item.exercisesSummary.forEach { (count, name) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(Emerald400)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "$count x $name",
+                                color = Zinc300,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
+
