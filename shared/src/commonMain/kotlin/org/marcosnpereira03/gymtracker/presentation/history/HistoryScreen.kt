@@ -15,9 +15,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -78,85 +81,106 @@ fun HistoryScreen(
     Scaffold(
         containerColor = Zinc950
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-        ) {
-            // Header: Historial de Entreno
-            item {
-                Column {
-                    Text(
-                        text = "Historial de Entreno",
-                        color = White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Consulta, edita o elimina tus sesiones anteriores",
-                        color = Zinc400,
-                        fontSize = 13.sp
-                    )
-                }
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Zinc950)
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Emerald400)
             }
-
-            // Dual Tab Toggle: [ 📅 Por Calendario ] vs [ 🏋️ Por Ejercicio ]
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Tab 1: Por Calendario
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (selectedTab == 0) Emerald400 else Zinc900)
-                            .border(1.dp, if (selectedTab == 0) Emerald400 else Zinc800, RoundedCornerShape(10.dp))
-                            .clickable { selectedTab = 0 }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📅", fontSize = 14.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Por Calendario",
-                                color = if (selectedTab == 0) Color.Black else Zinc400,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // Tab 2: Por Ejercicio
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (selectedTab == 1) Emerald400 else Zinc900)
-                            .border(1.dp, if (selectedTab == 1) Emerald400 else Zinc800, RoundedCornerShape(10.dp))
-                            .clickable { selectedTab = 1 }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🏋️", fontSize = 14.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Por Ejercicio",
-                                color = if (selectedTab == 1) Color.Black else Zinc400,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
+            ) {
+                // Header: Historial de Entreno
+                item {
+                    Column {
+                        Text(
+                            text = "Historial de Entreno",
+                            color = White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Consulta, edita o elimina tus sesiones anteriores",
+                            color = Zinc400,
+                            fontSize = 13.sp
+                        )
                     }
                 }
-            }
+
+                // Dual Tab Toggle: [ Por Calendario ] vs [ Por Ejercicio ]
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Tab 1: Por Calendario
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedTab == 0) Emerald400 else Zinc900)
+                                .border(1.dp, if (selectedTab == 0) Emerald400 else Zinc800, RoundedCornerShape(10.dp))
+                                .clickable { selectedTab = 0 }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = if (selectedTab == 0) Color.Black else Zinc400,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Por Calendario",
+                                    color = if (selectedTab == 0) Color.Black else Zinc400,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Tab 2: Por Ejercicio
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedTab == 1) Emerald400 else Zinc900)
+                                .border(1.dp, if (selectedTab == 1) Emerald400 else Zinc800, RoundedCornerShape(10.dp))
+                                .clickable { selectedTab = 1 }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.FitnessCenter,
+                                    contentDescription = null,
+                                    tint = if (selectedTab == 1) Color.Black else Zinc400,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Por Ejercicio",
+                                    color = if (selectedTab == 1) Color.Black else Zinc400,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
 
             if (selectedTab == 0) {
                 // ==========================================
@@ -417,7 +441,12 @@ fun HistoryScreen(
 
                                     if (state.bestPrString != null) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("🏅", fontSize = 15.sp)
+                                            Icon(
+                                                imageVector = Icons.Default.EmojiEvents,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFBBF24), // Gold / Amber PR
+                                                modifier = Modifier.size(15.dp)
+                                            )
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text(
                                                 text = "PR: ${state.bestPrString}",
@@ -623,6 +652,7 @@ fun HistoryScreen(
             }
         }
     }
+}
 }
 
 @Composable

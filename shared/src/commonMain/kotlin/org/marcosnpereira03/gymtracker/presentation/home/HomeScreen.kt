@@ -9,11 +9,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -26,10 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.marcosnpereira03.gymtracker.domain.model.Workout
-import org.marcosnpereira03.gymtracker.presentation.theme.*
-
-import androidx.compose.material.icons.automirrored.filled.Login
 import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
+import org.marcosnpereira03.gymtracker.presentation.theme.*
 
 @Composable
 fun HomeScreen(
@@ -42,13 +44,18 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.loadDashboardData()
+    }
+
     Scaffold(
         containerColor = Zinc950
     ) { paddingValues ->
-        if (state.isLoading && state.recentWorkouts.isEmpty() && state.currentUser != null) {
+        if (state.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Zinc950)
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
@@ -164,7 +171,10 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val greetingText = if (state.currentUser != null) {
-                                    "👋 Hola ${state.currentUser?.email?.substringBefore('@') ?: "Usuario"}"
+                                    val displayName = state.currentUser?.username?.takeIf { it.isNotBlank() }
+                                        ?: state.currentUser?.email?.substringBefore('@')
+                                        ?: "Usuario"
+                                    "👋 Hola, $displayName"
                                 } else {
                                     "👋 Bienvenido"
                                 }
@@ -246,16 +256,20 @@ fun HomeScreen(
                                         color = Zinc400,
                                         fontSize = 12.sp
                                     )
-                                    Text(
-                                        text = "⚖️",
-                                        fontSize = 14.sp
+                                    Icon(
+                                        imageVector = Icons.Default.Scale,
+                                        contentDescription = null,
+                                        tint = Emerald400,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                val weightVal = state.latestWeight?.weightKg ?: 87.6
+                                val weightVal = state.latestWeight?.let {
+                                    if (it.weightKg % 1.0 == 0.0) "${it.weightKg.toInt()}" else "${it.weightKg}"
+                                } ?: "--"
                                 Row(verticalAlignment = Alignment.Bottom) {
                                     Text(
-                                        text = "$weightVal",
+                                        text = weightVal,
                                         color = White,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold
@@ -297,9 +311,11 @@ fun HomeScreen(
                                         color = Zinc400,
                                         fontSize = 12.sp
                                     )
-                                    Text(
-                                        text = "↗️",
-                                        fontSize = 14.sp
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = Zinc400,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -425,14 +441,15 @@ fun WorkoutSummaryCard(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Zinc800),
+                        .clip(CircleShape)
+                        .background(Zinc800)
+                        .border(1.dp, Emerald500.copy(alpha = 0.3f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.DateRange,
+                        imageVector = Icons.Default.FitnessCenter,
                         contentDescription = null,
-                        tint = Zinc400,
+                        tint = Emerald400,
                         modifier = Modifier.size(20.dp)
                     )
                 }
