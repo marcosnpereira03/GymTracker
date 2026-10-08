@@ -206,6 +206,33 @@ class ProfileViewModel(
         }
     }
 
+    fun onUploadAvatar(imageBytes: ByteArray) {
+        if (imageBytes.isEmpty()) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAvatar = true, errorMessage = null, successMessage = null) }
+            val result = authRepository.uploadAvatar(imageBytes)
+            if (result.isSuccess) {
+                val newAvatarUrl = result.getOrNull()
+                _uiState.update {
+                    it.copy(
+                        isUploadingAvatar = false,
+                        currentUser = it.currentUser?.copy(avatarUrl = newAvatarUrl),
+                        successMessage = "¡Foto de perfil actualizada con éxito!"
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isUploadingAvatar = false,
+                        errorMessage = result.exceptionOrNull()?.message ?: "Error al subir la foto de perfil."
+                    )
+                }
+            }
+        }
+    }
+
+
     fun onAddWeightLog(weightKg: Double, notes: String?) {
         if (weightKg <= 0.0) return
         viewModelScope.launch {

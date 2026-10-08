@@ -1,6 +1,7 @@
 package org.marcosnpereira03.gymtracker.presentation.profile
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +52,9 @@ import org.marcosnpereira03.gymtracker.domain.model.MuscleGroupVolume
 import org.marcosnpereira03.gymtracker.domain.model.PersonalRecord
 import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
+import org.marcosnpereira03.gymtracker.presentation.util.rememberImagePickerLauncher
+import org.marcosnpereira03.gymtracker.presentation.util.rememberRemoteImage
+
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -62,6 +68,9 @@ fun ProfileScreen(
     val state by viewModel.uiState.collectAsState()
     var showLogWeightDialog by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
+    val imagePickerLauncher = rememberImagePickerLauncher { bytes ->
+        viewModel.onUploadAvatar(bytes)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadProfileData()
@@ -81,6 +90,8 @@ fun ProfileScreen(
         EditProfileDialog(
             currentUsername = state.currentUser?.username ?: "",
             currentAvatarUrl = state.currentUser?.avatarUrl,
+            isUploadingAvatar = state.isUploadingAvatar,
+            onPickAvatar = { imagePickerLauncher() },
             onDismiss = { showEditProfileDialog = false },
             onConfirm = { newUsername, newAvatarUrl ->
                 viewModel.onUpdateProfile(newUsername, newAvatarUrl)
@@ -88,6 +99,7 @@ fun ProfileScreen(
             }
         )
     }
+
 
     Scaffold(
         containerColor = Zinc950,
@@ -200,13 +212,17 @@ fun ProfileScreen(
                             ?: state.currentUser?.email?.substringBefore('@')
                             ?: "Atleta",
                         email = state.currentUser?.email,
+                        avatarUrl = state.currentUser?.avatarUrl,
+                        isUploadingAvatar = state.isUploadingAvatar,
                         totalWorkouts = state.totalWorkoutsCount,
                         currentWeightKg = state.latestWeight?.weightKg,
                         prsCount = state.personalRecords.size,
+                        onPickAvatarClick = { imagePickerLauncher() },
                         onEditProfileClick = { showEditProfileDialog = true },
                         onLogWeightClick = { showLogWeightDialog = true }
                     )
                 }
+
 
                 // 2. Selector de Pestañas (Estadísticas / PRs / Pesajes)
                 item {
@@ -381,9 +397,12 @@ fun ProfileScreen(
 fun ProfileHeaderCard(
     username: String,
     email: String?,
+    avatarUrl: String?,
+    isUploadingAvatar: Boolean,
     totalWorkouts: Int,
     currentWeightKg: Double?,
     prsCount: Int,
+    onPickAvatarClick: () -> Unit,
     onEditProfileClick: () -> Unit,
     onLogWeightClick: () -> Unit
 ) {
@@ -401,27 +420,77 @@ fun ProfileHeaderCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar circular estilizado
+                // Avatar circular estilizado con soporte de foto y botón de cámara
+                val remoteBitmap = rememberRemoteImage(avatarUrl)
+
                 Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(CircleShape)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Emerald600, Emerald950)
-                            )
-                        )
-                        .border(2.dp, Emerald400.copy(alpha = 0.6f), CircleShape)
-                        .clickable { onEditProfileClick() },
+                    modifier = Modifier.size(72.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    val initial = username.firstOrNull()?.uppercaseChar()?.toString() ?: "A"
-                    Text(
-                        text = initial,
-                        color = White,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Emerald600, Emerald950)
+                                )
+                            )
+                            .border(2.dp, Emerald400.copy(alpha = 0.8f), CircleShape)
+                            .clickable { onPickAvatarClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (remoteBitmap != null) {
+                            Image(
+                                bitmap = remoteBitmap,
+                                contentDescription = "Foto de perfil",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            val initial = username.firstOrNull()?.uppercaseChar()?.toString() ?: "A"
+                            Text(
+                                text = initial,
+                                color = White,
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+
+                        if (isUploadingAvatar) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.6f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(26.dp),
+                                    color = Emerald400,
+                                    strokeWidth = 2.5.dp
+                                )
+                            }
+                        }
+                    }
+
+                    // Botón flotante de cámara
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(Emerald400)
+                            .border(1.5.dp, Zinc950, CircleShape)
+                            .clickable { onPickAvatarClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Cambiar foto de perfil",
+                            tint = Color.Black,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -445,6 +514,7 @@ fun ProfileHeaderCard(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
+
 
             // Resumen de Métricas Rápidas (Entrenos / Peso / PRs)
             Row(
@@ -1362,10 +1432,13 @@ fun ProfileWeightLogRow(
 fun EditProfileDialog(
     currentUsername: String,
     currentAvatarUrl: String?,
+    isUploadingAvatar: Boolean,
+    onPickAvatar: () -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (username: String, avatarUrl: String?) -> Unit
 ) {
     var usernameText by remember { mutableStateOf(currentUsername) }
+    val remoteBitmap = rememberRemoteImage(currentAvatarUrl)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1378,17 +1451,114 @@ fun EditProfileDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Selector / Previsualización de Avatar dentro del diálogo
+                Box(
+                    modifier = Modifier.size(80.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Emerald600, Emerald950)
+                                )
+                            )
+                            .border(2.dp, Emerald400.copy(alpha = 0.8f), CircleShape)
+                            .clickable { onPickAvatar() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (remoteBitmap != null) {
+                            Image(
+                                bitmap = remoteBitmap,
+                                contentDescription = "Foto de perfil",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            val initial = usernameText.firstOrNull()?.uppercaseChar()?.toString() ?: "A"
+                            Text(
+                                text = initial,
+                                color = White,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+
+                        if (isUploadingAvatar) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.6f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = Emerald400,
+                                    strokeWidth = 2.5.dp
+                                )
+                            }
+                        }
+                    }
+
+                    // Botón de cámara badge
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(Emerald400)
+                            .border(1.5.dp, Zinc950, CircleShape)
+                            .clickable { onPickAvatar() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Seleccionar foto",
+                            tint = Color.Black,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = onPickAvatar,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Zinc800,
+                        contentColor = Emerald400
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isUploadingAvatar) "Subiendo foto..." else "Cambiar foto",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
                 Text(
                     text = "Personaliza tu nombre de usuario para mostrar en el perfil y en la pantalla de inicio.",
                     color = Zinc400,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
                 )
 
                 OutlinedTextField(
                     value = usernameText,
                     onValueChange = { usernameText = it },
-                    label = { Text("Nombre de usuario (ej. marcosn03)", color = Zinc400) },
+                    label = { Text("Nombre de usuario", color = Zinc400) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -1425,6 +1595,7 @@ fun EditProfileDialog(
         shape = RoundedCornerShape(16.dp)
     )
 }
+
 
 @Composable
 fun LogWeightDialog(

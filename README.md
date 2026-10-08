@@ -1,4 +1,4 @@
-# GymTracker (IronLog) — Plataforma Multiplataforma de Registro y Análisis de Fuerza
+# GymTracker — Plataforma Multiplataforma de Registro y Análisis de Fuerza
 
 ---
 
