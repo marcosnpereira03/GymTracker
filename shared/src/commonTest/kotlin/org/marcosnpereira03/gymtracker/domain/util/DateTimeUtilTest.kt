@@ -1,6 +1,6 @@
 package org.marcosnpereira03.gymtracker.domain.util
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -41,7 +41,8 @@ class DateTimeUtilTest {
     fun `today returns a valid LocalDate`() {
         val today = DateTimeUtil.today()
         assertTrue(today.year >= 2026)
-        assertTrue(today.monthNumber in 1..12)
-        assertTrue(today.dayOfMonth in 1..31)
+        assertTrue((today.month.ordinal + 1) in 1..12)
+        assertTrue(today.day in 1..31)
     }
 }
+

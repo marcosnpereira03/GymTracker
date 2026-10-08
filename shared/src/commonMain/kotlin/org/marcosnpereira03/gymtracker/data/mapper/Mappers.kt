@@ -8,7 +8,7 @@ import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Mappers bidireccionales entre DTOs de red y Modelos de Dominio.

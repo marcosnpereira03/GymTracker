@@ -3,7 +3,7 @@ package org.marcosnpereira03.gymtracker.presentation.workout
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Representa una serie en estado de edición interactiva en pantalla.

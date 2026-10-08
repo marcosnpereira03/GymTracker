@@ -1,6 +1,6 @@
 package org.marcosnpereira03.gymtracker.domain
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet

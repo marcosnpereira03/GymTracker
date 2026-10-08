@@ -16,7 +16,7 @@ import org.marcosnpereira03.gymtracker.domain.usecase.CalculateOneRepMaxUseCase
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
 import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * ViewModel para gestionar la creación y edición de sesiones y series con UDF.

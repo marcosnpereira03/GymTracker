@@ -1,9 +1,9 @@
 package org.marcosnpereira03.gymtracker.presentation.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -19,7 +19,7 @@ sealed class BottomNavItem(
     object Home : BottomNavItem(Screen.Home.route, "Hoy", Icons.Default.Home)
     object Workout : BottomNavItem(Screen.Workout.createRoute(), "Entrenar", Icons.Default.PlayArrow)
     object History : BottomNavItem(Screen.History.route, "Historial", Icons.Default.DateRange)
-    object Exercises : BottomNavItem(Screen.Exercises.route, "Ejercicios", Icons.Default.List)
+    object Exercises : BottomNavItem(Screen.Exercises.route, "Ejercicios", Icons.AutoMirrored.Filled.List)
     object Profile : BottomNavItem(Screen.Profile.route, "Perfil", Icons.Default.Person)
 }
 

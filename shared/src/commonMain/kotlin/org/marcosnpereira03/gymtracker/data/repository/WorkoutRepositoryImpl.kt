@@ -10,7 +10,7 @@ import org.marcosnpereira03.gymtracker.data.remote.dto.WorkoutSetDto
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 
@@ -213,7 +213,8 @@ class WorkoutRepositoryImpl(
             }
 
             inMemoryWorkouts.removeAll { it.id == validWorkoutId || it.id == id }
-            Unit
+            return@runCatching Unit
         }
     }
 }
+

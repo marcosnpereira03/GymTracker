@@ -49,7 +49,7 @@ fun HistoryScreen(
     val today = remember { org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.today() }
     var selectedDate by remember { mutableStateOf(today) }
     var displayedYear by remember { mutableStateOf(today.year) }
-    var displayedMonth by remember { mutableStateOf(today.monthNumber) }
+    var displayedMonth by remember { mutableStateOf(today.month.ordinal + 1) }
     var workoutToDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -763,8 +763,8 @@ fun CalendarCard(
                             val dayNumber = (row * 7 + col) - startOffset + 1
                             if (dayNumber in 1..totalDays) {
                                 val isSelected = selectedDate.year == displayedYear &&
-                                        selectedDate.monthNumber == displayedMonth &&
-                                        selectedDate.dayOfMonth == dayNumber
+                                        (selectedDate.month.ordinal + 1) == displayedMonth &&
+                                        selectedDate.day == dayNumber
                                 val hasWorkout = dayNumber in daysWithWorkouts
 
                                 Box(

@@ -8,7 +8,7 @@ import org.marcosnpereira03.gymtracker.data.mapper.toDto
 import org.marcosnpereira03.gymtracker.data.remote.dto.BodyWeightLogDto
 import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 
@@ -79,7 +79,8 @@ class ProfileRepositoryImpl(
                 println("Error deleting body weight log in Supabase: ${e.message}")
             }
             inMemoryLogs.removeAll { it.id == validId || it.id == id }
-            Unit
+            return@runCatching Unit
         }
     }
 }
+

@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package org.marcosnpereira03.gymtracker
 
 import androidx.compose.runtime.Composable

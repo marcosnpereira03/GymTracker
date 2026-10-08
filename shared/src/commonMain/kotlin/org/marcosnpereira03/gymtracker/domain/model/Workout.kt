@@ -1,6 +1,6 @@
 package org.marcosnpereira03.gymtracker.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Representa una sesión completa de entrenamiento.
