@@ -2,137 +2,116 @@
 
 ---
 
-## 1. Resumen Ejecutivo y Enfoque de Negocio
+## 1. ¿De qué trata el proyecto?
 
-**GymTracker** es una aplicación móvil multiplataforma desarrollada con **Kotlin Multiplatform (KMP)** y **Compose Multiplatform** (Android & iOS), diseñada para el registro preciso, análisis biométrico y seguimiento de la sobrecarga progresiva en entrenamientos de fuerza e hipertrofia.
+**GymTracker** es una aplicación móvil multiplataforma desarrollada con **Kotlin Multiplatform (KMP)** y **Compose Multiplatform** (Android & iOS), diseñada para el registro de alta precisión, análisis biométrico y seguimiento riguroso de la sobrecarga progresiva en atletas de fuerza e hipertrofia.
 
-### El Enfoque de Negocio (Superando el anotador tradicional)
-El registro de entrenamientos de fuerza suele realizarse en aplicaciones genéricas que funcionan como meros bloques de notas digitales o planillas estáticas. Esto genera importantes fricciones:
-*   Falta de estimación del esfuerzo real y proximidad al fallo muscular (**RIR - Reps In Reserve**).
-*   Desconexión entre el tonelaje de volumen levantado y la distribución por grupo muscular.
-*   Dificultad para visualizar la tendencia del peso corporal y correlacionarla con el rendimiento físico.
-*   Pérdida de datos por desconexión a internet o falta de sincronización multi-dispositivo.
+### Problemática Resuelta
+Las aplicaciones tradicionales de registro suelen operar como simples blocs de notas digitales o planillas estáticas, careciendo de herramientas analíticas de nivel profesional:
+* **Falta de cuantificación del esfuerzo real**: No contemplan la proximidad al fallo muscular (**RIR — Reps In Reserve**).
+* **Desconexión analítica**: Dificultad para correlacionar el tonelaje de volumen acumulado con la distribución por grupo muscular o la tendencia del peso corporal.
+* **Falta de feedback inteligente**: Ausencia de orientación técnica automatizada basada en el historial del atleta.
+* **Fragilidad ante desconexión**: Bloqueo o pérdida de datos ante interrupciones de red.
 
-**GymTracker** resuelve esta problemática estructurando una experiencia deportiva técnica y moderna:
-1. **Registro granular de series y esfuerzo**: Registro de peso (kg), repeticiones e intensidad subjetiva mediante RIR ($0 \le \text{RIR} \le 10$).
-2. **Cálculo automatizado de 1RM Estimado**: Implementación de la fórmula de Epley ponderada por el esfuerzo en reserva, permitiendo proyectar la fuerza máxima sin someter al atleta a repeticiones máximas lesivas.
-3. **Analítica de volumen y composición corporal**: Gráficos interactivos en tiempo real con filtrado dinámico por períodos (Diario, Semanal, Mensual, Histórico) para volumen muscular acumulado y evolución del peso corporal.
-4. **Resiliencia total (Offline-First & Cero Crashes)**: Arquitectura resiliente con sincronización transparente a la base de datos PostgreSQL en Supabase protegida por Row-Level Security (RLS).
-
----
-
-## 2. Arquitectura de Software y Patrones de Diseño
-
-El proyecto implementa **Clean Architecture + MVVM** con **Unidirectional Data Flow (UDF)**, estructurado para maximizar la reutilización de código (100% de la lógica de negocio y de UI en `commonMain`). La lógica se divide en capas bien delimitadas:
-*   **Dominio (`domain`)**: Puro Kotlin sin dependencias externas, con modelos inmutables (`Workout`, `Exercise`, `BodyWeightLog`), interfaces de repositorio y casos de uso de lógica de negocio (1RM y volumen).
-*   **Datos (`data`)**: Implementación de repositorios consumiendo Supabase Postgrest con DTOs serializables, mappers bidireccionales y fallback en memoria para funcionamiento offline.
-*   **Presentación (`presentation`)**: UI declarativa con Compose Multiplatform, tema Material 3 Dark Theme deportivo y ViewModels que exponen estado reactivo e inmutable mediante `StateFlow`.
-*   **Inyección de Dependencias (`di`)**: Módulos centralizados con Koin para gestionar el ciclo de vida de los componentes.
-
-### Principios Arquitectónicos Clave:
-*   **Separación de Responsabilidades (SoC)**: La capa de `domain` no tiene conocimiento alguno de Supabase, Compose o Android. Toda regla matemática y de negocio es testeable de forma aislada.
-*   **Unidirectional Data Flow (UDF)**: Cada ViewModel expone un único `StateFlow<ScreenUiState>` inmutable. La UI emite eventos hacia el ViewModel y este actualiza el estado de forma reactiva y atómica.
-*   **Aislamiento Multiplataforma**: Prohibición de APIs exclusivas de JVM/Android en `commonMain` (ej. `java.time.*` o `java.util.UUID`). Se utilizan `kotlinx.datetime.*` y la utilidad pure-KMP `UuidUtil`.
+### Funcionalidades Principales
+1. **Registro Granular de Entrenamientos**: Carga de series en tiempo real especificando peso ($\text{kg}$), repeticiones e intensidad subjetiva mediante $\text{RIR}$ ($0 \le \text{RIR} \le 10$).
+2. **Cálculo de 1RM Estimado Automatizado**: Proyección matemática de la repetición máxima en base a la fórmula de Epley ponderada por el esfuerzo en reserva, evitando someter al atleta a repeticiones máximas lesivas.
+3. **Analítica de Volumen y Composición Corporal**: Gráficos interactivos en tiempo real con filtrado temporal dinámico (Diario, Semanal, Mensual, Histórico) y renderizado de curvas de Bézier mediante Compose Canvas.
+4. **Coach de Inteligencia Artificial (Google Gemini)**: Entrenador personal interactivo integrado con la API de Gemini que analiza en tiempo real el catálogo de ejercicios y las sesiones registradas para ofrecer recomendaciones de entrenamiento.
+5. **Resiliencia Total y Modo Offline**: Sincronización transparente con PostgreSQL en Supabase protegida por Row-Level Security (RLS) y almacenamiento resiliente en memoria ante caídas de conexión.
 
 ---
 
-## 3. Bitácora de Copiloto: Orquestación y Co-creación con IA
+## 2. ¿Qué arquitectura se eligió y por qué?
 
-El desarrollo de GymTracker se orquestó adoptando un rol de liderazgo técnico y arquitectura, utilizando a **Antigravity (Google DeepMind)** como copiloto de desarrollo autónomo.
+El proyecto implementa **Clean Architecture** junto con el patrón de presentación **MVVM (Model-View-ViewModel)** y **Unidirectional Data Flow (UDF)**, compartiendo el **100%** del código de lógica de negocio, datos y UI en `commonMain`.
 
-### La IA como Multiplicador de Velocidad
-La colaboración con Antigravity permitió acelerar drásticamente los ciclos de iteración:
-*   **Generación de Boilerplate & DTOs**: Creación y mapeo de clases serializables en Kotlin con `@SerialName` y extension functions bidireccionales (`toDomain()` y `toDto()`).
-*   **Maquetación en Compose Multiplatform**: Construcción de componentes declarativos avanzados (gráficos en Canvas con curvas Bézier, listas animadas `LazyColumn`, modales de historial con badges de récords).
-*   **Casos de Uso Matemáticos**: Implementación instantánea de fórmulas de biomecánica deportiva y cálculo de tonelaje con cobertura de pruebas unitarias.
+```text
+shared/src/commonMain/kotlin/org/marcosnpereira03/gymtracker/
+├── domain/                          # PURO KOTLIN (Sin dependencias externas ni frameworks)
+│   ├── model/                       # Modelos inmutables (Workout, Exercise, WorkoutSet, BodyWeightLog)
+│   ├── repository/                  # Interfaces de abstracción de datos
+│   └── usecase/                     # Lógica de negocio (CalculateOneRepMax, CalculateWorkoutVolume, etc.)
+├── data/                            # Implementación de datos y persistencia
+│   ├── remote/                      # Clientes HTTP (SupabaseClientFactory, GeminiApiClient, DTOs)
+│   ├── mapper/                      # Mapeo bidireccional entre DTOs y modelos de dominio
+│   └── repository/                  # Implementaciones de repositorios con caché y fallback offline
+├── di/                              # Inyección de dependencias modular con Koin
+└── presentation/                    # UI Declarativa con Compose Multiplatform
+    ├── theme/                       # Design System Material 3 (Dark Theme deportivo)
+    ├── navigation/                  # Enrutamiento tipado (NavHost / Screen routes)
+    ├── home/                        # Dashboard principal y resumen diario
+    ├── workout/                     # Registro de sesión en vivo y edición de series
+    ├── history/                     # Historial de entrenamientos y récords personales (PRs)
+    ├── exercises/                   # Catálogo de ejercicios y estimación de 1RM
+    ├── profile/                     # Estadísticas temporales, pesajes y perfil
+    └── coach/                       # Chatbot interactivo con Google Gemini
+```
 
-### Desafíos Complejos y Depuración Asistida
-
-1. **Alineación con el Esquema de Base de Datos y Row-Level Security (RLS)**:
-   - *Problema*: La aplicación requería sincronizar datos con el esquema existente de la plataforma Web (`ejercicios`, `entrenamientos`, `series_realizadas`, `pesajes`). Postgrest rechazaba las peticiones si no se adjuntaba el `user_id` del usuario autenticado bajo las políticas de RLS (`auth.uid() = user_id`).
-   - *Solución*: Se unificaron los DTOs al español y se inyectó dinámicamente el `currentUserOrNull()?.id` en todos los repositorios antes de ejecutar los `upsert`/`insert`, garantizando persistencia y seguridad multi-usuario sin colapsar el cliente.
-
-2. **Generación de Identificadores Únicos en Pure Kotlin (KMP)**:
-   - *Problema*: `java.util.UUID.randomUUID()` no es multiplataforma y rompía la compilación en targets iOS.
-   - *Solución*: Se diseñó `UuidUtil.kt` en `commonMain`, un generador de UUID v4 criptográficamente pseudoaleatorio compatible con RFC 4122, con sanitización (`ensureUuid`) y validación por expresiones regulares.
-
-3. **Ciclo de Vida y Reseteo de Estados en ViewModels Singleton**:
-   - *Problema*: Al guardar un entrenamiento, el ViewModel mantenía las series en memoria para preservar borradores entre pestañas, pero esto provocaba que al guardar la sesión quedara "pegada" en la pantalla de entrenamiento.
-   - *Solución*: Se rediseñó el flujo de guardado en `WorkoutSessionViewModel.kt` para que, tras persistir exitosamente en Supabase, ejecute un reseteo atómico del estado (`sets = emptyList()`, nuevo UUID y fecha actual), permitiendo transicionar limpiamente a una nueva sesión.
+### Justificación Arquitectónica:
+* **Independencia y Testabilidad del Dominio**: La capa `domain` no posee dependencias de Compose, Supabase, Android ni iOS. Todas las fórmulas biomecánicas y reglas de negocio son evaluables mediante tests unitarios rápidos y deterministas en JVM/KMP.
+* **Flujo Unidireccional de Datos (UDF)**: Cada `ViewModel` expone un único `StateFlow<UiState>` inmutable. Los componentes Compose reaccionan exclusivamente a cambios en este estado y propagan eventos de usuario hacia el ViewModel, garantizando estabilidad y evitando condiciones de carrera.
+* **Separación de Responsabilidades (SoC)**: Los cambios en la capa de datos (como la API de Supabase o la integración de Gemini) no impactan en la lógica de dominio ni en la capa visual.
+* **Reutilización Multiplataforma Real**: Al evitar APIs específicas de plataforma (como `java.time.*` o `java.util.UUID`), el código compila de forma idéntica y nativa en Android e iOS.
 
 ---
 
-## 4. Stack Tecnológico y Justificación Técnica
+## 3. ¿Qué herramientas de IA se utilizaron y cómo ayudaron a acelerar el desarrollo?
 
-| Tecnología | Rol en el Proyecto | Justificación Arquitectónica |
+El desarrollo de GymTracker se orquestó adoptando un enfoque de copiloto e ingeniería asistida por Inteligencia Artificial:
+
+### 1. Antigravity IDE & AI Assistant (Google DeepMind)
+* **Arquitectura y Estructura KMP**: Asistencia en la configuración del entorno multiplataforma Gradle, inyección de dependencias con **Koin**, y scaffolding de capas según los principios de Clean Architecture.
+* **Modelado y Mappers Bidireccionales**: Generación precisa de DTOs serializables con `@SerialName` alineados con el esquema relacional de Supabase y extension functions para conversión de dominio.
+* **Implementación de Componentes Gráficos**: Co-diseño de componentes visuales avanzados en **Compose Multiplatform Canvas**, tales como gráficos de volumen con curvas cúbicas de Bézier, sombreado degradado y cuadrículas analíticas.
+* **Cobertura y QA Unitario**: Redacción de suites de pruebas unitarias exhaustivas en `commonTest` para validar casos de borde en cálculos de 1RM, tonelaje y manejo de errores.
+
+### 2. Google Gemini API (Coach de IA Integrado en la App)
+* **Asesoramiento Personalizado en Tiempo Real**: Se diseñó el cliente `GeminiApiClient` y el caso de uso `BuildAiUserDataContextUseCase`, los cuales estructuran un contexto con los entrenamientos recientes y ejercicios del usuario para alimentar el modelo de lenguaje (`gemini-flash-lite-latest` y fallbacks).
+* **Resiliencia ante Sobrecarga de Tráfico**: Detección de límites de tasa (429/503) con reintento automático progresivo mientras la UI mantiene el estado de pensamiento activo, ocultando detalles técnicos al usuario y ofreciendo una experiencia fluida.
+
+---
+
+## 4. Stack Tecnológico y Componentes Clave
+
+| Componente / Tecnología | Propósito | Beneficio Técnico |
 | :--- | :--- | :--- |
-| **Kotlin Multiplatform (KMP 2.x)** | Core Multiplataforma | Permite compartir el 100% de la lógica de negocio, red, persistencia y modelos entre Android e iOS sin duplicar código. |
-| **Compose Multiplatform** | Framework de UI Declarativa | Renderizado nativo y reactivo de interfaces en Android e iOS compartiendo componentes, animaciones y temas Material 3. |
-| **Supabase Postgrest (`supabase-kt`)** | Cliente REST / Backend as a Service | Interacción reactiva con PostgreSQL mediante consultas fuertemente tipadas y serialización con `kotlinx.serialization`. |
-| **Supabase Auth** | Autenticación y Sesiones | Gestión de usuarios con JWT, inicio de sesión por correo/contraseña y control de acceso seguro. |
-| **Supabase RLS (Row Level Security)** | Seguridad de Base de Datos | Políticas de acceso a nivel de fila que garantizan que cada atleta solo acceda y modifique sus propios entrenamientos y pesajes. |
-| **Koin (Core & Compose)** | Inyección de Dependencias | Framework ligero de DI nativo para Kotlin Multiplatform con soporte de ViewModels integrados en el ciclo de Compose. |
-| **Kotlinx Coroutines & Flow** | Concurrencia y Reactividad | Manejo asíncrono no bloqueante de llamadas de red y exposición reactiva de estados con `StateFlow`. |
-| **Kotlinx DateTime** | Manipulación Temporal Multiplataforma | Gestión de fechas y tiempos en formato ISO-8601 y `YYYY-MM-DD` compatible con los tipos `DATE` y `TIMESTAMPTZ` de PostgreSQL. |
-| **Jetpack / Compose Canvas** | Renderizado Gráfico Personalizado | Dibujado de curvas de Bézier cúbicas, gradientes translúcidos y cuadrículas para análisis de volumen y peso corporal. |
+| **Kotlin Multiplatform (KMP 2.x)** | Core Multiplataforma | 100% de lógica de negocio, datos y modelos compartidos entre plataformas. |
+| **Compose Multiplatform** | UI Declarativa | Interfaz nativa compartida para Android e iOS con diseño responsivo. |
+| **Supabase Postgrest (`supabase-kt`)** | Backend & Base de Datos | Consultas a PostgreSQL mediante cliente tipado con Row-Level Security (RLS). |
+| **Supabase Auth** | Autenticación | Control de sesiones seguras mediante correo y contraseña. |
+| **Google Gemini REST API** | Inteligencia Artificial | Chatbot deportivo interactivo con conocimiento del contexto del atleta. |
+| **Koin** | Inyección de Dependencias | Framework ligero de DI nativo para Kotlin Multiplatform. |
+| **Kotlinx Coroutines & Flow** | Concurrencia Reactiva | Operaciones asíncronas no bloqueantes con flujos reactivos `StateFlow`. |
+| **Kotlinx DateTime** | Fechas Multiplataforma | Manejo de tiempos ISO-8601 compatible con PostgreSQL `TIMESTAMPTZ`. |
+| **Compose Canvas** | Visualización de Datos | Renderizado de gráficos vectoriales personalizados de volumen y peso. |
 
 ---
 
-## 5. Esquema de Base de Datos (PostgreSQL en Supabase)
-
-El modelo de datos relacional garantiza integridad referencial con borrado en cascada y seguridad multi-usuario mediante **Row Level Security (RLS)** vinculada a `auth.users(id)`:
-*   **`ejercicios`**: Catálogo maestro de ejercicios indexados por usuario y grupo muscular.
-*   **`entrenamientos`**: Cabecera de sesiones de entrenamiento con fecha, nombre de sesión y observaciones.
-*   **`series_realizadas`**: Registro granular de series con peso en kg, repeticiones efectivas y RIR ($0 \le \text{RIR} \le 10$), vinculadas al entrenamiento y ejercicio correspondiente.
-*   **`pesajes`**: Registro histórico de peso corporal para correlación de rendimiento y composición física.
-
----
-
-## 6. Lógica de Negocio y Fórmulas Matemáticas
+## 5. Lógica de Negocio y Fórmulas Matemáticas
 
 ### 1. Cálculo de 1RM Estimado (`CalculateOneRepMaxUseCase`)
-Utiliza la fórmula de **Epley** ajustada por las repeticiones en reserva (**RIR**), calculando las repeticiones efectivas al fallo ($r_{\text{eff}} = \text{reps} + \text{rir}$):
+Aplica la fórmula de **Epley** ajustada por las repeticiones en reserva (**RIR**), calculando las repeticiones efectivas al fallo ($r_{\text{eff}} = \text{reps} + \text{rir}$):
 
 $$\text{1RM} = \text{peso\_kg} \times \left(1 + \frac{\text{reps} + \text{rir}}{30.0}\right)$$
 
-*   *Caso base*: Si $\text{reps} = 1$ y $\text{rir} = 0$, el 1RM es exactamente $\text{peso\_kg}$.
-*   *Límites*: Si $\text{peso\_kg} \le 0$ o $\text{reps} \le 0$, retorna $0.0$.
+* *Caso base*: Si $\text{reps} = 1$ y $\text{rir} = 0$, el 1RM es exactamente $\text{peso\_kg}$.
+* *Límites*: Si $\text{peso\_kg} \le 0$ o $\text{reps} \le 0$, retorna $0.0$.
 
 ### 2. Cálculo de Tonelaje Total (`CalculateWorkoutVolumeUseCase`)
-Calcula el volumen de carga acumulado de todas las series completadas de una sesión:
+Calcula el tonelaje acumulado de todas las series válidas de una sesión:
 
 $$\text{Volumen Total (kg)} = \sum_{i=1}^{n} (\text{peso\_kg}_i \times \text{reps}_i)$$
 
 ---
 
-## 7. QA y Pruebas Unitarias
-
-La lógica del dominio está respaldada por una suite de pruebas unitarias en `shared/src/commonTest/kotlin`:
-
-*   **`CalculateOneRepMaxUseCaseTest`**:
-    - Validación del cálculo con repeticiones estándar y RIR variable.
-    - Validación de 1RM puro (1 repetición al fallo RIR 0).
-    - Resiliencia ante valores de borde (peso cero, repeticiones cero, valores negativos).
-*   **`CalculateWorkoutVolumeUseCaseTest`**:
-    - Cálculo de sumatoria de tonelaje para múltiples series.
-    - Manejo seguro de sesiones vacías o series con peso/repeticiones nulas.
-*   **`CalculateMuscleGroupVolumeUseCaseTest`**:
-    - Agrupamiento y cálculo discriminado de volumen por grupos musculares (Pecho, Espalda, Piernas, etc.).
-
-Para ejecutar las pruebas unitarias:
-```bash
-./gradlew :shared:testDebugUnitTest
-```
-
----
-
-## 8. Guía de Instalación y Ejecución Local
+## 6. Guía de Compilación y Ejecución Local
 
 ### Requisitos Previos
-*   **Java Development Kit (JDK)**: Versión 17 o superior.
-*   **Android Studio**: Ladybug / Meerkat o superior con Android SDK instalado.
-*   **Xcode**: Versión 15+ (requerido únicamente para compilar y ejecutar en el simulador de iOS / macOS).
-*   Una cuenta activa de **Supabase** con el esquema SQL inicial ejecutado.
+* **Java Development Kit (JDK)**: Versión 17 o superior.
+* **Android Studio**: Ladybug / Meerkat o superior con Android SDK configurado.
+* **Xcode**: Versión 15+ (necesario únicamente para compilar y ejecutar en el simulador de iOS / macOS).
+* **Git**: Para el control de versiones.
 
 ---
 
@@ -144,40 +123,45 @@ cd GymTracker
 
 ---
 
-### Paso 2: Configuración de Conexión a Supabase
-Las credenciales de conexión se encuentran centralizadas en [SupabaseClientFactory.kt](file:///c:/Users/ryzen/Desktop/GymTracker/shared/src/commonMain/kotlin/org/marcosnpereira03/gymtracker/data/remote/SupabaseClientFactory.kt):
+### Paso 2: Configurar Variables en `local.properties`
+Crea o edita el archivo `local.properties` en la raíz del proyecto para definir las credenciales (estas se inyectan automáticamente en tiempo de compilación mediante `AppConfig` sin exponerse en el repositorio):
 
-```kotlin
-object SupabaseConfig {
-    const val DEFAULT_URL = "https://tu-proyecto.supabase.co"
-    const val DEFAULT_ANON_KEY = "tu-anon-key-de-supabase"
-}
+```properties
+# Credenciales de Supabase
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_ANON_KEY=tu-anon-key-de-supabase
+
+# Clave de API de Google Gemini (opcional, para el Coach de IA)
+GEMINI_API_KEY=tu-api-key-de-gemini
 ```
 
----
-
-### Paso 3: Inicializar la Base de Datos en Supabase
-1. Ingresa a tu panel de **Supabase Dashboard** -> **SQL Editor**.
-2. Abre el archivo [01_initial_schema.sql](file:///c:/Users/ryzen/Desktop/GymTracker/supabase/migrations/01_initial_schema.sql).
-3. Pega y ejecuta el script para crear las tablas (`ejercicios`, `entrenamientos`, `series_realizadas`, `pesajes`), los índices de rendimiento y las políticas de Row-Level Security (RLS).
+> **Nota:** La aplicación incluye valores de prueba y almacenamiento local de contingencia, por lo que puede ejecutarse directamente incluso sin configurar una base de datos externa.
 
 ---
 
-### Paso 4: Compilar y Ejecutar la Aplicación
+### Paso 3: Inicializar la Base de Datos en Supabase (Opcional)
+Si deseas conectar tu propia instancia de Supabase:
+1. Accede al **SQL Editor** en tu panel de Supabase.
+2. Ejecuta el script de migración ubicado en:
+   [`supabase/migrations/01_initial_schema.sql`](supabase/migrations/01_initial_schema.sql)
+3. Esto configurará las tablas (`ejercicios`, `entrenamientos`, `series_realizadas`, `pesajes`), los índices de rendimiento y las políticas de seguridad (RLS).
+
+---
+
+### Paso 4: Compilar y Ejecutar
 
 #### En Android:
-Desde la terminal o desde el botón *Run* de Android Studio:
+Desde la terminal o desde el botón **Run** en Android Studio:
 ```bash
-# Compilar e instalar en emulador/dispositivo conectado
+# Compilar e instalar en emulador o dispositivo conectado
 ./gradlew :androidApp:installDebug
 ```
 
-#### En iOS (requiere macOS):
-Abre el directorio `iosApp` en Xcode o ejecuta:
+#### En iOS (requiere macOS y Xcode):
 ```bash
 open iosApp/iosApp.xcworkspace
 ```
-Selecciona tu simulador de iPhone de preferencia y presiona **Cmd + R**.
+Selecciona el dispositivo/simulador deseado en Xcode y presiona **Cmd + R**.
 
 #### Ejecutar Suite de Tests Unitarios:
 ```bash

@@ -72,29 +72,34 @@ class HomeViewModel(
 
                     val latest = workouts.firstOrNull()
                     val latestVolume = latest?.let { calculateWorkoutVolumeUseCase(it) } ?: 0.0
+                    val isOfflineMode = workoutRepository.isOffline()
 
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isOffline = isOfflineMode,
                             latestWorkout = latest,
                             latestWeight = weights.firstOrNull(),
                             recentWorkouts = recentItems,
-                            totalVolumeLatestWorkout = latestVolume
+                            totalVolumeLatestWorkout = latestVolume,
+                            errorMessage = null
                         )
                     }
                 } else {
+                    val isOfflineMode = workoutRepository.isOffline()
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                            isOffline = isOfflineMode
                         )
                     }
                 }
             } catch (e: Exception) {
+                val isOfflineMode = workoutRepository.isOffline()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                        isOffline = isOfflineMode
                     )
                 }
             }

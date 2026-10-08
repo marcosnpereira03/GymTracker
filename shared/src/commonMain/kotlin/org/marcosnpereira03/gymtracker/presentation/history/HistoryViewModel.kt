@@ -74,7 +74,7 @@ class HistoryViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                            errorMessage = null
                         )
                     }
                 }
@@ -82,7 +82,7 @@ class HistoryViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                        errorMessage = null
                     )
                 }
             }

@@ -57,6 +57,10 @@ class WorkoutRepositoryImpl(
         )
     }
 
+    private var isLastFetchOffline = false
+
+    override fun isOffline(): Boolean = isLastFetchOffline
+
     override suspend fun getWorkouts(): Result<List<Workout>> {
         return runCatching {
             try {
@@ -79,6 +83,7 @@ class WorkoutRepositoryImpl(
 
                 val sortedWorkouts = remoteWorkouts.reversed().sortedByDescending { it.date }
 
+                isLastFetchOffline = false
                 if (remoteWorkouts.isNotEmpty()) {
                     inMemoryWorkouts.clear()
                     inMemoryWorkouts.addAll(sortedWorkouts)
@@ -87,7 +92,8 @@ class WorkoutRepositoryImpl(
                     inMemoryWorkouts.reversed().sortedByDescending { it.date }
                 }
             } catch (e: Exception) {
-                println("Error fetching workouts from Supabase: ${e.message}")
+                println("Error fetching workouts from Supabase (Offline mode active): ${e.message}")
+                isLastFetchOffline = true
                 inMemoryWorkouts.reversed().sortedByDescending { it.date }
             }
         }
