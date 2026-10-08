@@ -20,11 +20,10 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- 2. Políticas de Seguridad (RLS) en storage.objects para el bucket 'avatars'
 
--- Lectura pública: Cualquier usuario puede ver las fotos de perfil
+-- Nota de Seguridad: Al ser un bucket público (public = true), las imágenes son servidas 
+-- directamente por URL pública (/storage/v1/object/public/avatars/...) sin requerir política SELECT.
+-- No se expone SELECT público en storage.objects para prevenir el listado no deseado de archivos.
 DROP POLICY IF EXISTS "Avatars are publicly accessible" ON storage.objects;
-CREATE POLICY "Avatars are publicly accessible"
-    ON storage.objects FOR SELECT
-    USING (bucket_id = 'avatars');
 
 -- Inserción: El usuario solo puede subir archivos en su propia carpeta (ej: avatars/{user_id}/avatar.jpg)
 DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
