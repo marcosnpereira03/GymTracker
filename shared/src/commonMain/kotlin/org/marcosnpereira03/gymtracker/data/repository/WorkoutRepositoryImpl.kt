@@ -10,7 +10,7 @@ import org.marcosnpereira03.gymtracker.data.remote.dto.WorkoutSetDto
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 
@@ -77,16 +77,18 @@ class WorkoutRepositoryImpl(
                     dto.toDomain(sets)
                 }
 
+                val sortedWorkouts = remoteWorkouts.reversed().sortedByDescending { it.date }
+
                 if (remoteWorkouts.isNotEmpty()) {
                     inMemoryWorkouts.clear()
-                    inMemoryWorkouts.addAll(remoteWorkouts)
-                    remoteWorkouts.sortedByDescending { it.date }
+                    inMemoryWorkouts.addAll(sortedWorkouts)
+                    sortedWorkouts
                 } else {
-                    inMemoryWorkouts.sortedByDescending { it.date }
+                    inMemoryWorkouts.reversed().sortedByDescending { it.date }
                 }
             } catch (e: Exception) {
                 println("Error fetching workouts from Supabase: ${e.message}")
-                inMemoryWorkouts.sortedByDescending { it.date }
+                inMemoryWorkouts.reversed().sortedByDescending { it.date }
             }
         }
     }
@@ -211,7 +213,8 @@ class WorkoutRepositoryImpl(
             }
 
             inMemoryWorkouts.removeAll { it.id == validWorkoutId || it.id == id }
-            Unit
+            return@runCatching Unit
         }
     }
 }
+

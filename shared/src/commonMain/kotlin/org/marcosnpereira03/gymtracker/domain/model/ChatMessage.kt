@@ -1,6 +1,6 @@
 package org.marcosnpereira03.gymtracker.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Emisor del mensaje en el chat con el Coach.

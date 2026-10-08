@@ -1,6 +1,6 @@
 package org.marcosnpereira03.gymtracker.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Representa un Récord Personal (PR) alcanzado en un ejercicio específico.

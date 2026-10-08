@@ -10,5 +10,7 @@ package org.marcosnpereira03.gymtracker.domain.model
 data class Exercise(
     val id: String,
     val name: String,
-    val muscleGroup: String
+    val muscleGroup: String,
+    val equipment: String? = null
 )
+

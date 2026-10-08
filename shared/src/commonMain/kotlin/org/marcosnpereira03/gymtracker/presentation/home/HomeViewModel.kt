@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
+import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateWorkoutVolumeUseCase
@@ -19,6 +20,7 @@ class HomeViewModel(
     private val workoutRepository: WorkoutRepository,
     private val profileRepository: ProfileRepository,
     private val authRepository: AuthRepository,
+    private val exerciseRepository: ExerciseRepository,
     private val calculateWorkoutVolumeUseCase: CalculateWorkoutVolumeUseCase
 ) : ViewModel() {
 
@@ -41,10 +43,31 @@ class HomeViewModel(
 
             val workoutsResult = workoutRepository.getWorkouts()
             val weightsResult = profileRepository.getBodyWeightLogs()
+            val exercisesResult = exerciseRepository.getExercises()
 
             if (workoutsResult.isSuccess && weightsResult.isSuccess) {
                 val workouts = workoutsResult.getOrDefault(emptyList())
                 val weights = weightsResult.getOrDefault(emptyList())
+                val exercises = exercisesResult.getOrDefault(emptyList())
+                val exerciseMap = exercises.associateBy { it.id }
+
+                val recentItems = workouts.take(5).map { workout ->
+                    val orderedExerciseIds = mutableListOf<String>()
+                    workout.sets.forEach { set ->
+                        if (!orderedExerciseIds.contains(set.exerciseId)) {
+                            orderedExerciseIds.add(set.exerciseId)
+                        }
+                    }
+                    val summary = orderedExerciseIds.map { exId ->
+                        val count = workout.sets.count { it.exerciseId == exId }
+                        val name = exerciseMap[exId]?.name ?: "Ejercicio"
+                        Pair(count, name)
+                    }
+                    HomeWorkoutItem(
+                        workout = workout,
+                        exercisesSummary = summary
+                    )
+                }
 
                 val latest = workouts.firstOrNull()
                 val latestVolume = latest?.let { calculateWorkoutVolumeUseCase(it) } ?: 0.0
@@ -54,7 +77,7 @@ class HomeViewModel(
                         isLoading = false,
                         latestWorkout = latest,
                         latestWeight = weights.firstOrNull(),
-                        recentWorkouts = workouts.take(5),
+                        recentWorkouts = recentItems,
                         totalVolumeLatestWorkout = latestVolume
                     )
                 }
@@ -76,4 +99,5 @@ class HomeViewModel(
         }
     }
 }
+
 

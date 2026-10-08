@@ -56,15 +56,24 @@ jobs:
           require_tests: true
           detailed_summary: true
 
+      - name: Verify KMP Multiplatform Integrity (compileCommonMainKotlinMetadata)
+        run: ./gradlew compileCommonMainKotlinMetadata --no-daemon --stacktrace
+
+      - name: Run Android Lint & Static Analysis (lintDebug)
+        run: ./gradlew :androidApp:lintDebug --no-daemon --stacktrace
+
       - name: Verify Android App Build (assembleDebug)
         run: ./gradlew :androidApp:assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Test Artifacts
+      - name: Upload Test & Lint Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-html-reports
+          name: ci-reports-and-artifacts
           path: |
             shared/build/reports/tests/testDebugUnitTest/
             androidApp/build/reports/tests/
+            androidApp/build/reports/lint-results-debug.html
+            androidApp/build/reports/lint-results-debug.sarif
           retention-days: 7
+

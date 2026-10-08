@@ -3,7 +3,7 @@ package org.marcosnpereira03.gymtracker.domain.usecase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.marcosnpereira03.gymtracker.domain.model.*
 import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository

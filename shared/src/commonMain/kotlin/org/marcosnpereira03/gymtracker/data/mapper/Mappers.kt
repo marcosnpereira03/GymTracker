@@ -8,7 +8,7 @@ import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.domain.model.Workout
 import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Mappers bidireccionales entre DTOs de red y Modelos de Dominio.
@@ -19,7 +19,8 @@ fun ExerciseDto.toDomain(): Exercise {
     return Exercise(
         id = id,
         name = name,
-        muscleGroup = muscleGroup
+        muscleGroup = muscleGroup,
+        equipment = equipment
     )
 }
 
@@ -28,9 +29,11 @@ fun Exercise.toDto(userId: String? = null): ExerciseDto {
         id = id,
         userId = userId,
         name = name,
-        muscleGroup = muscleGroup
+        muscleGroup = muscleGroup,
+        equipment = equipment
     )
 }
+
 
 // WorkoutSet Mappers
 fun WorkoutSetDto.toDomain(): WorkoutSet {

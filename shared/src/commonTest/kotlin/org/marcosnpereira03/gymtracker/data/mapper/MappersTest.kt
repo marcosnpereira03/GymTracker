@@ -1,6 +1,6 @@
 package org.marcosnpereira03.gymtracker.data.mapper
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.marcosnpereira03.gymtracker.data.remote.dto.BodyWeightLogDto
 import org.marcosnpereira03.gymtracker.data.remote.dto.ExerciseDto
 import org.marcosnpereira03.gymtracker.data.remote.dto.WorkoutDto

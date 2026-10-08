@@ -8,7 +8,7 @@ import org.marcosnpereira03.gymtracker.data.mapper.toDto
 import org.marcosnpereira03.gymtracker.data.remote.dto.BodyWeightLogDto
 import org.marcosnpereira03.gymtracker.domain.model.BodyWeightLog
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 import org.marcosnpereira03.gymtracker.domain.util.UuidUtil
 
@@ -35,16 +35,18 @@ class ProfileRepositoryImpl(
                     .decodeList<BodyWeightLogDto>()
                     .map { it.toDomain() }
 
+                val sortedLogs = remoteLogs.reversed().sortedByDescending { it.date }
+
                 if (remoteLogs.isNotEmpty()) {
                     inMemoryLogs.clear()
-                    inMemoryLogs.addAll(remoteLogs)
-                    remoteLogs.sortedByDescending { it.date }
+                    inMemoryLogs.addAll(sortedLogs)
+                    sortedLogs
                 } else {
-                    inMemoryLogs.sortedByDescending { it.date }
+                    inMemoryLogs.reversed().sortedByDescending { it.date }
                 }
             } catch (e: Exception) {
                 println("Error fetching body weight logs from Supabase: ${e.message}")
-                inMemoryLogs.sortedByDescending { it.date }
+                inMemoryLogs.reversed().sortedByDescending { it.date }
             }
         }
     }
@@ -77,7 +79,8 @@ class ProfileRepositoryImpl(
                 println("Error deleting body weight log in Supabase: ${e.message}")
             }
             inMemoryLogs.removeAll { it.id == validId || it.id == id }
-            Unit
+            return@runCatching Unit
         }
     }
 }
+
