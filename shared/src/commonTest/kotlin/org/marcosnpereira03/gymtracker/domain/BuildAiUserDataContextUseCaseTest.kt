@@ -44,7 +44,9 @@ class BuildAiUserDataContextUseCaseTest {
         override suspend fun signOut(): Result<Unit> = Result.success(Unit)
         override suspend fun checkCurrentSession(): AuthUser? = user
         override suspend fun updateProfile(username: String, avatarUrl: String?): Result<AuthUser> = Result.success(user!!)
+        override suspend fun uploadAvatar(imageBytes: ByteArray, extension: String): Result<String> = Result.success("https://example.com/avatar.jpg")
     }
+
 
     @Test
     fun generates_comprehensive_user_context_for_gemini() = kotlinx.coroutines.test.runTest {

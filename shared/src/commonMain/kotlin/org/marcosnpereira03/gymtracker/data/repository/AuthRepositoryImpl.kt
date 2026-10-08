@@ -5,7 +5,9 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.CoroutineScope
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -127,6 +129,25 @@ class AuthRepositoryImpl(
         }
     }
 
+    override suspend fun uploadAvatar(imageBytes: ByteArray, extension: String): Result<String> {
+        return runCatching {
+            val user = supabaseClient.auth.currentUserOrNull()
+                ?: throw IllegalStateException("Usuario no autenticado.")
+            val path = "${user.id}/avatar.$extension"
+            val bucket = supabaseClient.storage.from("avatars")
+
+            bucket.upload(path, imageBytes) {
+                upsert = true
+            }
+            val publicUrl = bucket.publicUrl(path)
+
+            val currentUsername = _currentUser.value?.username ?: "Usuario"
+            updateProfile(currentUsername, publicUrl).getOrThrow()
+
+            publicUrl
+        }
+    }
+
     override suspend fun signOut(): Result<Unit> {
         return runCatching {
             supabaseClient.auth.signOut()
@@ -134,3 +155,4 @@ class AuthRepositoryImpl(
         }
     }
 }
+

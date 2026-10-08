@@ -5,6 +5,7 @@ import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.storage.Storage
 import io.ktor.client.plugins.HttpTimeout
 import org.marcosnpereira03.gymtracker.config.AppConfig
 
@@ -17,7 +18,7 @@ object SupabaseConfig {
 }
 
 /**
- * Fábrica para instanciar el cliente Supabase configurado con Postgrest y Auth.
+ * Fábrica para instanciar el cliente Supabase configurado con Postgrest, Auth y Storage.
  * Incluye configuración de timeouts rápidos para evitar bloqueos indefinidos sin conexión.
  */
 object SupabaseClientFactory {
@@ -40,6 +41,7 @@ object SupabaseClientFactory {
             }
             install(Postgrest)
             install(Auth)
+            install(Storage)
         }
     }
 }
