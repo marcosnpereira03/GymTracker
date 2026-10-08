@@ -8,16 +8,21 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.delay
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
  * Cliente HTTP multiplataforma para interactuar con la API REST de Google Gemini.
+ * Incluye reintentos automáticos con retroceso ante sobrecarga de tráfico o límites temporales de tasa.
  */
 class GeminiApiClient(
     private val httpClient: HttpClient = createDefaultHttpClient()
 ) {
     companion object {
+        const val MAX_RETRIES_PER_MODEL = 3
+        const val INITIAL_BACKOFF_MS = 1500L
+
         fun createDefaultHttpClient(): HttpClient = HttpClient {
             install(HttpTimeout) {
                 requestTimeoutMillis = 60_000L
@@ -35,6 +40,8 @@ class GeminiApiClient(
 
     /**
      * Envía una solicitud de generación de contenido al modelo Gemini.
+     * Si se detecta saturación de tráfico, error 429/503 o sobrecarga temporal,
+     * reintenta automáticamente con retroceso mientras la UI permanece en estado de procesamiento.
      */
     suspend fun generateContent(
         request: GeminiRequestDto,
@@ -43,7 +50,7 @@ class GeminiApiClient(
     ): Result<String> = runCatching {
         val activeKey = apiKey.trim().ifBlank { GeminiConfig.apiKey.trim() }
         if (activeKey.isBlank()) {
-            throw IllegalStateException("No se ha configurado la API Key de Google Gemini. Por favor, ingrésala en los ajustes del Coach.")
+            throw IllegalStateException("No se ha configurado la API Key de Google Gemini.")
         }
 
         val requestJson = json.encodeToString(request)
@@ -56,49 +63,94 @@ class GeminiApiClient(
         var lastError: Throwable? = null
 
         for (currentModel in candidateModels) {
-            try {
-                val url = "${GeminiConfig.BASE_URL}/$currentModel:generateContent?key=$activeKey"
-                val response = httpClient.post(url) {
-                    headers.append("x-goog-api-key", activeKey)
-                    contentType(ContentType.Application.Json)
-                    setBody(requestJson)
-                }
+            var attempt = 0
+            while (attempt < MAX_RETRIES_PER_MODEL) {
+                attempt++
+                try {
+                    val url = "${GeminiConfig.BASE_URL}/$currentModel:generateContent?key=$activeKey"
+                    val response = httpClient.post(url) {
+                        headers.append("x-goog-api-key", activeKey)
+                        contentType(ContentType.Application.Json)
+                        setBody(requestJson)
+                    }
 
-                val responseBody = response.bodyAsText()
+                    val responseBody = response.bodyAsText()
 
-                if (!response.status.isSuccess()) {
-                    val errorResponse = runCatching { json.decodeFromString<GeminiResponseDto>(responseBody) }.getOrNull()
-                    val errorMsg = errorResponse?.error?.message ?: "Error al consultar Gemini (HTTP ${response.status.value})"
-                    // Si es 404, 503 o 500, probamos el siguiente modelo
-                    if (response.status.value in listOf(404, 500, 503)) {
-                        lastError = RuntimeException(errorMsg)
+                    if (!response.status.isSuccess()) {
+                        val statusCode = response.status.value
+                        val errorResponse = runCatching { json.decodeFromString<GeminiResponseDto>(responseBody) }.getOrNull()
+                        val rawErrorMsg = errorResponse?.error?.message ?: responseBody
+
+                        if (isTransientTrafficOrRateLimitError(statusCode, rawErrorMsg)) {
+                            lastError = RuntimeException("Gemini saturado o con límite temporal ($statusCode): $rawErrorMsg")
+                            if (attempt < MAX_RETRIES_PER_MODEL) {
+                                delay(INITIAL_BACKOFF_MS * attempt)
+                                continue
+                            }
+                            // Si se agotaron los intentos en este modelo, probamos el siguiente modelo de respaldo
+                            break
+                        }
+
+                        // Si es 404 (modelo no disponible), pasar al siguiente modelo de inmediato
+                        if (statusCode == 404) {
+                            lastError = RuntimeException("Modelo no encontrado (404): $currentModel")
+                            break
+                        }
+
+                        // Otro error no recuperable (ej. clave inválida 400/403)
+                        throw RuntimeException("Error en API de Gemini: $statusCode")
+                    }
+
+                    val responseDto = json.decodeFromString<GeminiResponseDto>(responseBody)
+                    val textResult = responseDto.candidates
+                        ?.firstOrNull()
+                        ?.content
+                        ?.parts
+                        ?.mapNotNull { it.text }
+                        ?.joinToString("\n")
+
+                    if (!textResult.isNullOrBlank()) {
+                        return@runCatching textResult
+                    } else {
+                        lastError = RuntimeException("Respuesta vacía del modelo $currentModel")
+                    }
+                } catch (e: Exception) {
+                    lastError = e
+                    if (isNetworkOrTransientException(e) && attempt < MAX_RETRIES_PER_MODEL) {
+                        delay(INITIAL_BACKOFF_MS * attempt)
                         continue
                     }
-                    throw RuntimeException(errorMsg)
+                    break
                 }
-
-                val responseDto = json.decodeFromString<GeminiResponseDto>(responseBody)
-                val textResult = responseDto.candidates
-                    ?.firstOrNull()
-                    ?.content
-                    ?.parts
-                    ?.mapNotNull { it.text }
-                    ?.joinToString("\n")
-
-                if (!textResult.isNullOrBlank()) {
-                    return@runCatching textResult
-                }
-            } catch (e: Exception) {
-                lastError = e
-                // Si aún quedan modelos candidatos, continuamos intentando con el siguiente
-                if (candidateModels.last() != currentModel) {
-                    continue
-                }
-                throw e
             }
         }
 
-        throw lastError ?: IllegalStateException("Gemini devolvió una respuesta vacía o los modelos no respondieron a tiempo.")
+        throw lastError ?: IllegalStateException("No se pudo obtener respuesta del Coach de IA.")
+    }
+
+    private fun isTransientTrafficOrRateLimitError(statusCode: Int, errorMessage: String): Boolean {
+        if (statusCode in listOf(429, 500, 502, 503, 504, 529)) return true
+        val lower = errorMessage.lowercase()
+        return lower.contains("resource_exhausted") ||
+                lower.contains("quota") ||
+                lower.contains("rate limit") ||
+                lower.contains("too many requests") ||
+                lower.contains("overloaded") ||
+                lower.contains("unavailable") ||
+                lower.contains("high traffic") ||
+                lower.contains("capacity") ||
+                lower.contains("try again")
+    }
+
+    private fun isNetworkOrTransientException(e: Exception): Boolean {
+        val msg = e.message?.lowercase() ?: ""
+        return msg.contains("timeout") ||
+                msg.contains("connect") ||
+                msg.contains("socket") ||
+                msg.contains("traffic") ||
+                msg.contains("overload") ||
+                msg.contains("resource_exhausted") ||
+                msg.contains("rate limit")
     }
 }
 
