@@ -19,13 +19,7 @@ class ProfileRepositoryImpl(
     private val supabaseClient: SupabaseClient
 ) : ProfileRepository {
 
-    private val inMemoryLogs = mutableListOf<BodyWeightLog>().apply {
-        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-1"), date = Instant.parse("2026-10-02T08:00:00Z"), weightKg = 78.5, notes = "En ayunas"))
-        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-2"), date = Instant.parse("2026-09-25T08:00:00Z"), weightKg = 78.2, notes = "En ayunas"))
-        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-3"), date = Instant.parse("2026-09-18T08:00:00Z"), weightKg = 77.8, notes = "Post cardio"))
-        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-4"), date = Instant.parse("2026-09-11T08:00:00Z"), weightKg = 77.4, notes = "En ayunas"))
-        add(BodyWeightLog(id = UuidUtil.ensureUuid("bw-5"), date = Instant.parse("2026-09-04T08:00:00Z"), weightKg = 77.0, notes = "Inicio de ciclo"))
-    }
+    private val inMemoryLogs = mutableListOf<BodyWeightLog>()
 
     override suspend fun getBodyWeightLogs(): Result<List<BodyWeightLog>> {
         return runCatching {
@@ -37,13 +31,9 @@ class ProfileRepositoryImpl(
 
                 val sortedLogs = remoteLogs.reversed().sortedByDescending { it.date }
 
-                if (remoteLogs.isNotEmpty()) {
-                    inMemoryLogs.clear()
-                    inMemoryLogs.addAll(sortedLogs)
-                    sortedLogs
-                } else {
-                    inMemoryLogs.reversed().sortedByDescending { it.date }
-                }
+                inMemoryLogs.clear()
+                inMemoryLogs.addAll(sortedLogs)
+                sortedLogs
             } catch (e: Exception) {
                 println("Error fetching body weight logs from Supabase: ${e.message}")
                 inMemoryLogs.reversed().sortedByDescending { it.date }
