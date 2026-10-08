@@ -100,15 +100,53 @@ class ExerciseRepositoryImpl(
 
     override suspend fun createExercise(exercise: Exercise): Result<Exercise> {
         return runCatching {
+            val validExercise = exercise.copy(id = UuidUtil.ensureUuid(exercise.id))
             val currentUserId = supabaseClient.auth.currentUserOrNull()?.id
             try {
-                supabaseClient.from("ejercicios").insert(exercise.toDto(currentUserId))
-            } catch (_: Exception) {
-                // Fallback local si falla la red
+                supabaseClient.from("ejercicios").insert(validExercise.toDto(currentUserId))
+            } catch (e: Exception) {
+                println("Error inserting exercise to Supabase: ${e.message}")
             }
-            inMemoryCache.removeAll { it.id == exercise.id }
-            inMemoryCache.add(exercise)
-            exercise
+            inMemoryCache.removeAll { it.id == validExercise.id || it.id == exercise.id }
+            inMemoryCache.add(validExercise)
+            validExercise
+        }
+    }
+
+    override suspend fun updateExercise(exercise: Exercise): Result<Exercise> {
+        return runCatching {
+            val validId = UuidUtil.ensureUuid(exercise.id)
+            val validExercise = exercise.copy(id = validId)
+            val currentUserId = supabaseClient.auth.currentUserOrNull()?.id
+            try {
+                supabaseClient.from("ejercicios").update(validExercise.toDto(currentUserId)) {
+                    filter {
+                        eq("id", validId)
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error updating exercise in Supabase: ${e.message}")
+            }
+            inMemoryCache.removeAll { it.id == validId || it.id == exercise.id }
+            inMemoryCache.add(validExercise)
+            validExercise
+        }
+    }
+
+    override suspend fun deleteExercise(id: String): Result<Unit> {
+        return runCatching {
+            val validId = UuidUtil.ensureUuid(id)
+            try {
+                supabaseClient.from("ejercicios").delete {
+                    filter {
+                        eq("id", validId)
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error deleting exercise from Supabase: ${e.message}")
+            }
+            inMemoryCache.removeAll { it.id == validId || it.id == id }
+            Unit
         }
     }
 }

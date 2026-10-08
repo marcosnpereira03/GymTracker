@@ -24,7 +24,7 @@ class ExercisesViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    private val fakeExercises = listOf(
+    private val fakeExerciseList = mutableListOf(
         Exercise(id = "e1", name = "Press Banca Plano", muscleGroup = "Pecho"),
         Exercise(id = "e2", name = "Aperturas en Polea", muscleGroup = "Pecho"),
         Exercise(id = "e3", name = "Sentadilla Libre", muscleGroup = "Cuádriceps"),
@@ -32,10 +32,24 @@ class ExercisesViewModelTest {
     )
 
     private val fakeExerciseRepository = object : ExerciseRepository {
-        override suspend fun getExercises(): Result<List<Exercise>> = Result.success(fakeExercises)
-        override suspend fun searchExercises(query: String): Result<List<Exercise>> = Result.success(fakeExercises)
-        override suspend fun getExerciseById(id: String): Result<Exercise> = Result.success(fakeExercises.first { it.id == id })
-        override suspend fun createExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+        override suspend fun getExercises(): Result<List<Exercise>> = Result.success(fakeExerciseList.toList())
+        override suspend fun searchExercises(query: String): Result<List<Exercise>> = Result.success(fakeExerciseList.toList())
+        override suspend fun getExerciseById(id: String): Result<Exercise> = Result.success(fakeExerciseList.first { it.id == id })
+        override suspend fun createExercise(exercise: Exercise): Result<Exercise> {
+            fakeExerciseList.add(exercise)
+            return Result.success(exercise)
+        }
+        override suspend fun updateExercise(exercise: Exercise): Result<Exercise> {
+            val index = fakeExerciseList.indexOfFirst { it.id == exercise.id }
+            if (index != -1) {
+                fakeExerciseList[index] = exercise
+            }
+            return Result.success(exercise)
+        }
+        override suspend fun deleteExercise(id: String): Result<Unit> {
+            fakeExerciseList.removeAll { it.id == id }
+            return Result.success(Unit)
+        }
     }
 
     private val fakeWorkoutRepository = object : WorkoutRepository {
@@ -50,6 +64,15 @@ class ExercisesViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        fakeExerciseList.clear()
+        fakeExerciseList.addAll(
+            listOf(
+                Exercise(id = "e1", name = "Press Banca Plano", muscleGroup = "Pecho"),
+                Exercise(id = "e2", name = "Aperturas en Polea", muscleGroup = "Pecho"),
+                Exercise(id = "e3", name = "Sentadilla Libre", muscleGroup = "Cuádriceps"),
+                Exercise(id = "e4", name = "Dominadas", muscleGroup = "Espalda")
+            )
+        )
         viewModel = ExercisesViewModel(
             exerciseRepository = fakeExerciseRepository,
             workoutRepository = fakeWorkoutRepository,
@@ -93,5 +116,30 @@ class ExercisesViewModelTest {
         assertEquals("Sentadilla", state.searchQuery)
         assertEquals(1, state.filteredExercises.size)
         assertEquals("Sentadilla Libre", state.filteredExercises[0].exercise.name)
+    }
+
+    @Test
+    fun `updates existing exercise successfully`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        val updated = Exercise(id = "e1", name = "Press Banca Inclinado", muscleGroup = "Pecho")
+        viewModel.onUpdateExercise(updated)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        val ex1 = state.exercises.find { it.exercise.id == "e1" }
+        assertEquals("Press Banca Inclinado", ex1?.exercise?.name)
+    }
+
+    @Test
+    fun `deletes exercise successfully`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.onDeleteExercise("e4")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(3, state.exercises.size)
+        assertEquals(null, state.exercises.find { it.exercise.id == "e4" })
     }
 }

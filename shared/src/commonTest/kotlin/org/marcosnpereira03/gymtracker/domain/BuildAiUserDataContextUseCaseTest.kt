@@ -20,6 +20,8 @@ class BuildAiUserDataContextUseCaseTest {
         override suspend fun searchExercises(query: String): Result<List<Exercise>> = Result.success(list)
         override suspend fun getExerciseById(id: String): Result<Exercise> = Result.success(list.first { it.id == id })
         override suspend fun createExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+        override suspend fun updateExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+        override suspend fun deleteExercise(id: String): Result<Unit> = Result.success(Unit)
     }
 
     private class FakeWorkoutRepo(val list: List<Workout>) : WorkoutRepository {
