@@ -154,11 +154,11 @@ class AiCoachViewModel(
                             )
                         }
                     },
-                    onFailure = { error ->
-                        val errorText = error.message ?: "Ocurrió un error al contactar al Coach de IA."
+                    onFailure = {
+                        val friendlyError = USER_FRIENDLY_ERROR_MESSAGE
                         val errorCoachMessage = ChatMessage(
                             id = generateId(),
-                            text = "⚠️ $errorText",
+                            text = friendlyError,
                             sender = MessageSender.COACH,
                             timestamp = DateTimeUtil.now(),
                             isError = true
@@ -170,17 +170,28 @@ class AiCoachViewModel(
                             state.copy(
                                 messages = finalMessages,
                                 isLoading = false,
-                                errorMessage = errorText
+                                errorMessage = friendlyError
                             )
                         }
                     }
                 )
             } catch (e: Exception) {
-                val errorMsg = e.message ?: "Error inesperado al procesar la solicitud."
+                val friendlyError = USER_FRIENDLY_ERROR_MESSAGE
+                val errorCoachMessage = ChatMessage(
+                    id = generateId(),
+                    text = friendlyError,
+                    sender = MessageSender.COACH,
+                    timestamp = DateTimeUtil.now(),
+                    isError = true
+                )
+                val finalMessages = _uiState.value.messages + errorCoachMessage
+                aiCoachRepository.saveConversationHistory(finalMessages)
+
                 _uiState.update { state ->
                     state.copy(
+                        messages = finalMessages,
                         isLoading = false,
-                        errorMessage = errorMsg
+                        errorMessage = friendlyError
                     )
                 }
             }
@@ -189,5 +200,9 @@ class AiCoachViewModel(
 
     private fun generateId(): String {
         return "${DateTimeUtil.now().toEpochMilliseconds()}_${Random.nextInt(1000, 9999)}"
+    }
+
+    companion object {
+        const val USER_FRIENDLY_ERROR_MESSAGE = "Ocurrió un error al procesar la petición. Por favor, intenta de nuevo."
     }
 }

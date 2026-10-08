@@ -61,53 +61,62 @@ class ProfileViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
 
-            val weightsResult = profileRepository.getBodyWeightLogs()
-            val workoutsResult = workoutRepository.getWorkouts()
-            val exercisesResult = exerciseRepository.getExercises()
+            try {
+                val weightsResult = profileRepository.getBodyWeightLogs()
+                val workoutsResult = workoutRepository.getWorkouts()
+                val exercisesResult = exerciseRepository.getExercises()
 
-            if (weightsResult.isSuccess && workoutsResult.isSuccess && exercisesResult.isSuccess) {
-                cachedWeights = weightsResult.getOrDefault(emptyList()).sortedByDescending { it.date }
-                cachedWorkouts = workoutsResult.getOrDefault(emptyList())
-                cachedExercises = exercisesResult.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
+                if (weightsResult.isSuccess && workoutsResult.isSuccess && exercisesResult.isSuccess) {
+                    cachedWeights = weightsResult.getOrDefault(emptyList()).sortedByDescending { it.date }
+                    cachedWorkouts = workoutsResult.getOrDefault(emptyList())
+                    cachedExercises = exercisesResult.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
 
-                val periodInfo = calculatePeriodRange(_uiState.value.selectedPeriod, _uiState.value.periodOffset)
-                val volumes = computeVolumeForRange(periodInfo.first, periodInfo.second, cachedWorkouts, cachedExercises)
-                val totalPeriodVolume = volumes.sumOf { it.totalVolumeKg }
-                val allWorkoutsVolume = cachedWorkouts.sumOf { calculateWorkoutVolumeUseCase(it) }
-                val prs = getPersonalRecordsUseCase(cachedWorkouts, cachedExercises)
+                    val periodInfo = calculatePeriodRange(_uiState.value.selectedPeriod, _uiState.value.periodOffset)
+                    val volumes = computeVolumeForRange(periodInfo.first, periodInfo.second, cachedWorkouts, cachedExercises)
+                    val totalPeriodVolume = volumes.sumOf { it.totalVolumeKg }
+                    val allWorkoutsVolume = cachedWorkouts.sumOf { calculateWorkoutVolumeUseCase(it) }
+                    val prs = getPersonalRecordsUseCase(cachedWorkouts, cachedExercises)
 
-                val weightPeriodInfo = calculatePeriodRange(_uiState.value.weightPeriod, _uiState.value.weightPeriodOffset)
-                val filteredWeights = filterWeightsForRange(weightPeriodInfo.first, weightPeriodInfo.second, cachedWeights)
+                    val weightPeriodInfo = calculatePeriodRange(_uiState.value.weightPeriod, _uiState.value.weightPeriodOffset)
+                    val filteredWeights = filterWeightsForRange(weightPeriodInfo.first, weightPeriodInfo.second, cachedWeights)
 
-                val latestW = cachedWeights.firstOrNull()
-                val prevW = cachedWeights.getOrNull(1)
-                val oldestW = cachedWeights.lastOrNull()
-                val totalLost = if (latestW != null && oldestW != null && oldestW != latestW) {
-                    round((oldestW.weightKg - latestW.weightKg) * 10.0) / 10.0
-                } else null
+                    val latestW = cachedWeights.firstOrNull()
+                    val prevW = cachedWeights.getOrNull(1)
+                    val oldestW = cachedWeights.lastOrNull()
+                    val totalLost = if (latestW != null && oldestW != null && oldestW != latestW) {
+                        round((oldestW.weightKg - latestW.weightKg) * 10.0) / 10.0
+                    } else null
 
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        totalWorkoutsCount = cachedWorkouts.size,
-                        totalVolumeKg = allWorkoutsVolume,
-                        weightLogs = cachedWeights,
-                        filteredWeightLogs = filteredWeights,
-                        latestWeight = latestW,
-                        previousWeight = prevW,
-                        totalWeightLostKg = totalLost,
-                        personalRecords = prs,
-                        muscleGroupVolumes = volumes,
-                        totalPeriodVolumeKg = totalPeriodVolume,
-                        periodRangeLabel = periodInfo.third,
-                        weightPeriodRangeLabel = weightPeriodInfo.third
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            totalWorkoutsCount = cachedWorkouts.size,
+                            totalVolumeKg = allWorkoutsVolume,
+                            weightLogs = cachedWeights,
+                            filteredWeightLogs = filteredWeights,
+                            latestWeight = latestW,
+                            previousWeight = prevW,
+                            totalWeightLostKg = totalLost,
+                            personalRecords = prs,
+                            muscleGroupVolumes = volumes,
+                            totalPeriodVolumeKg = totalPeriodVolume,
+                            periodRangeLabel = periodInfo.third,
+                            weightPeriodRangeLabel = weightPeriodInfo.third
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    }
                 }
-            } else {
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Error al cargar los datos del perfil."
+                        errorMessage = null
                     )
                 }
             }

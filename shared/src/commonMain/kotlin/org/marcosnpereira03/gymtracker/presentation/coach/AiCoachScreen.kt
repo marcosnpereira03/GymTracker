@@ -327,14 +327,18 @@ fun ChatMessageItem(message: ChatMessage) {
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(Zinc800)
-                    .border(1.dp, Emerald500.copy(alpha = 0.4f), CircleShape),
+                    .background(if (message.isError) Color(0xFF3B1212) else Zinc800)
+                    .border(
+                        1.dp,
+                        if (message.isError) Color(0xFFEF4444).copy(alpha = 0.5f) else Emerald500.copy(alpha = 0.4f),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.SmartToy,
                     contentDescription = null,
-                    tint = Emerald400,
+                    tint = if (message.isError) Color(0xFFEF4444) else Emerald400,
                     modifier = Modifier.size(18.dp)
                 )
             }

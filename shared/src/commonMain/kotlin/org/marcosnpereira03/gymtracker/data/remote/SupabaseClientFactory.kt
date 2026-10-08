@@ -1,10 +1,12 @@
 package org.marcosnpereira03.gymtracker.data.remote
 
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
+import io.ktor.client.plugins.HttpTimeout
 import org.marcosnpereira03.gymtracker.config.AppConfig
 
 /**
@@ -17,8 +19,10 @@ object SupabaseConfig {
 
 /**
  * Fábrica para instanciar el cliente Supabase configurado con Postgrest, Auth y Storage.
+ * Incluye configuración de timeouts rápidos para evitar bloqueos indefinidos sin conexión.
  */
 object SupabaseClientFactory {
+    @OptIn(SupabaseInternal::class)
     fun create(
         url: String = SupabaseConfig.DEFAULT_URL,
         anonKey: String = SupabaseConfig.DEFAULT_ANON_KEY
@@ -28,6 +32,13 @@ object SupabaseClientFactory {
             supabaseUrl = sanitizedUrl,
             supabaseKey = anonKey.trim()
         ) {
+            httpConfig {
+                install(HttpTimeout) {
+                    requestTimeoutMillis = 8000L
+                    connectTimeoutMillis = 5000L
+                    socketTimeoutMillis = 8000L
+                }
+            }
             install(Postgrest)
             install(Auth)
             install(Storage)

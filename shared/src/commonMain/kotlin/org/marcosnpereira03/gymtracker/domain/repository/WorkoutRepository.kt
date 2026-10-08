@@ -27,4 +27,9 @@ interface WorkoutRepository {
      * Elimina un entrenamiento y sus series por su identificador.
      */
     suspend fun deleteWorkout(id: String): Result<Unit>
+
+    /**
+     * Indica si la última interacción con la base de datos se realizó en modo offline/contingencia.
+     */
+    fun isOffline(): Boolean = false
 }

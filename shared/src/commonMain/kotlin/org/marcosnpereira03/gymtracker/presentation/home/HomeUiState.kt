@@ -17,6 +17,7 @@ data class HomeWorkoutItem(
  */
 data class HomeUiState(
     val isLoading: Boolean = false,
+    val isOffline: Boolean = false,
     val currentUser: AuthUser? = null,
     val latestWorkout: Workout? = null,
     val latestWeight: BodyWeightLog? = null,

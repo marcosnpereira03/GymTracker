@@ -174,4 +174,22 @@ class AiCoachViewModelTest {
         assertEquals(MessageSender.COACH, state.messages.first().sender)
         assertEquals(1, fakeRepo.getConversationHistory().size)
     }
+
+    @Test
+    fun `shows sanitized user friendly error and flags message as error when request fails`() = runTest(testDispatcher) {
+        fakeRepo.shouldFail = true
+        viewModel.onInputTextChanged("Pregunta con fallo")
+        viewModel.sendMessage()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals(3, state.messages.size) // Greeting + User message + Error coach message
+        val errorMsg = state.messages.last()
+        assertEquals(MessageSender.COACH, errorMsg.sender)
+        assertTrue(errorMsg.isError)
+        assertEquals(AiCoachViewModel.USER_FRIENDLY_ERROR_MESSAGE, errorMsg.text)
+        assertFalse(errorMsg.text.contains("Error de conexión"))
+        assertEquals(AiCoachViewModel.USER_FRIENDLY_ERROR_MESSAGE, state.errorMessage)
+    }
 }
