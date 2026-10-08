@@ -42,6 +42,7 @@ data class ProfileUiState(
     val weightPeriodRangeLabel: String = "",
     val activeTab: ProfileTab = ProfileTab.STATS,
     val isSavingProfile: Boolean = false,
+    val isUploadingAvatar: Boolean = false,
     val isLoggingWeight: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null

@@ -18,5 +18,7 @@ interface AuthRepository {
     suspend fun signOut(): Result<Unit>
     suspend fun checkCurrentSession(): AuthUser?
     suspend fun updateProfile(username: String, avatarUrl: String? = null): Result<AuthUser>
+    suspend fun uploadAvatar(imageBytes: ByteArray, extension: String = "jpg"): Result<String>
 }
+
 

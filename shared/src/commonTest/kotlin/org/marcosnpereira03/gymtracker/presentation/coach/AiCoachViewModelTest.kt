@@ -94,7 +94,9 @@ class AiCoachViewModelTest {
             override suspend fun signOut(): Result<Unit> = Result.success(Unit)
             override suspend fun checkCurrentSession(): AuthUser? = _currentUser.value
             override suspend fun updateProfile(username: String, avatarUrl: String?): Result<AuthUser> = Result.success(AuthUser("u1", "test@test.com", username))
+            override suspend fun uploadAvatar(imageBytes: ByteArray, extension: String): Result<String> = Result.success("https://example.com/avatar.jpg")
         }
+
 
         buildContextUseCase = BuildAiUserDataContextUseCase(
             exerciseRepository = fakeExerciseRepo,
