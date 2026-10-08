@@ -60,57 +60,84 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
 
-            if (_uiState.value.mode == AuthMode.LOGIN) {
-                val result = authRepository.signIn(email, password)
-                if (result.isSuccess) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isAuthenticated = true,
-                            successMessage = "¡Sesión iniciada con éxito!"
-                        )
+            try {
+                if (_uiState.value.mode == AuthMode.LOGIN) {
+                    val result = kotlinx.coroutines.withTimeoutOrNull(7000L) {
+                        authRepository.signIn(email, password)
+                    }
+                    if (result == null) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = "No se pudo establecer la conexión. Verifica tu conexión a internet e inténtalo de nuevo."
+                            )
+                        }
+                    } else if (result.isSuccess) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isAuthenticated = true,
+                                successMessage = "¡Sesión iniciada con éxito!"
+                            )
+                        }
+                    } else {
+                        val errorMsg = mapAuthError(result.exceptionOrNull(), isLogin = true)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = errorMsg
+                            )
+                        }
                     }
                 } else {
-                    val errorMsg = mapAuthError(result.exceptionOrNull(), isLogin = true)
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = errorMsg
-                        )
+                    val result = kotlinx.coroutines.withTimeoutOrNull(7000L) {
+                        authRepository.signUp(email, password)
+                    }
+                    if (result == null) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = "No se pudo establecer la conexión. Verifica tu conexión a internet e inténtalo de nuevo."
+                            )
+                        }
+                    } else if (result.isSuccess) {
+                        when (val signUpResult = result.getOrThrow()) {
+                            is org.marcosnpereira03.gymtracker.domain.repository.SignUpResult.Authenticated -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        isAuthenticated = true,
+                                        successMessage = "¡Cuenta creada y sesión iniciada con éxito!"
+                                    )
+                                }
+                            }
+                            is org.marcosnpereira03.gymtracker.domain.repository.SignUpResult.RequiresEmailConfirmation -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        isAuthenticated = false,
+                                        mode = AuthMode.LOGIN,
+                                        successMessage = "¡Cuenta registrada! Te hemos enviado un correo de confirmación a $email. Por favor verifícalo para iniciar sesión."
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        val errorMsg = mapAuthError(result.exceptionOrNull(), isLogin = false)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = errorMsg
+                            )
+                        }
                     }
                 }
-            } else {
-                val result = authRepository.signUp(email, password)
-                if (result.isSuccess) {
-                    when (val signUpResult = result.getOrThrow()) {
-                        is org.marcosnpereira03.gymtracker.domain.repository.SignUpResult.Authenticated -> {
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    isAuthenticated = true,
-                                    successMessage = "¡Cuenta creada y sesión iniciada con éxito!"
-                                )
-                            }
-                        }
-                        is org.marcosnpereira03.gymtracker.domain.repository.SignUpResult.RequiresEmailConfirmation -> {
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    isAuthenticated = false,
-                                    mode = AuthMode.LOGIN,
-                                    successMessage = "¡Cuenta registrada! Te hemos enviado un correo de confirmación a $email. Por favor verifícalo para iniciar sesión."
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    val errorMsg = mapAuthError(result.exceptionOrNull(), isLogin = false)
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = errorMsg
-                        )
-                    }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "No se pudo establecer la conexión. Verifica tu conexión a internet."
+                    )
                 }
             }
         }
@@ -134,8 +161,16 @@ class AuthViewModel(
             raw.contains("weak_password") || raw.contains("password should be at least") -> {
                 "La contraseña debe contener al menos 6 caracteres."
             }
-            raw.contains("unable to resolve host") || raw.contains("connectexception") || raw.contains("network") || raw.contains("timeout") -> {
-                "No se pudo conectar con el servidor. Revisa tu conexión a internet."
+            raw.contains("unable to resolve host") ||
+            raw.contains("connectexception") ||
+            raw.contains("unknownhost") ||
+            raw.contains("unresolved") ||
+            raw.contains("network") ||
+            raw.contains("timeout") ||
+            raw.contains("failed to connect") ||
+            raw.contains("no address") ||
+            raw.contains("socket") -> {
+                "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet e inténtalo de nuevo."
             }
             else -> {
                 if (isLogin) "No se pudo iniciar sesión. Verifica tus datos o inténtalo más tarde."

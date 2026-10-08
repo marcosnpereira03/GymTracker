@@ -31,49 +31,58 @@ class HistoryViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            val workoutsResult = workoutRepository.getWorkouts()
-            val exercisesResult = exerciseRepository.getExercises()
+            try {
+                val workoutsResult = workoutRepository.getWorkouts()
+                val exercisesResult = exerciseRepository.getExercises()
 
-            if (workoutsResult.isSuccess && exercisesResult.isSuccess) {
-                val workouts = workoutsResult.getOrDefault(emptyList())
-                val exercises = exercisesResult.getOrDefault(emptyList())
-                val exerciseMap = exercises.associateBy { it.id }
+                if (workoutsResult.isSuccess && exercisesResult.isSuccess) {
+                    val workouts = workoutsResult.getOrDefault(emptyList())
+                    val exercises = exercisesResult.getOrDefault(emptyList())
+                    val exerciseMap = exercises.associateBy { it.id }
 
-                val details = workouts.map { workout ->
-                    val volume = calculateWorkoutVolumeUseCase(workout)
-                    val exerciseNames = workout.sets
-                        .mapNotNull { set -> exerciseMap[set.exerciseId]?.name }
-                        .distinct()
+                    val details = workouts.map { workout ->
+                        val volume = calculateWorkoutVolumeUseCase(workout)
+                        val exerciseNames = workout.sets
+                            .mapNotNull { set -> exerciseMap[set.exerciseId]?.name }
+                            .distinct()
 
-                    WorkoutHistoryDetail(
-                        workout = workout,
-                        totalVolumeKg = volume,
-                        totalSets = workout.sets.size,
-                        exercisesSummary = exerciseNames
-                    )
+                        WorkoutHistoryDetail(
+                            workout = workout,
+                            totalVolumeKg = volume,
+                            totalSets = workout.sets.size,
+                            exercisesSummary = exerciseNames
+                        )
+                    }
+
+                    val defaultExercise = _uiState.value.selectedExerciseId?.let { id -> exercises.firstOrNull { it.id == id } }
+                        ?: exercises.firstOrNull()
+
+                    val (records, prString) = computeExerciseRecords(workouts, defaultExercise?.id, _uiState.value.recordLimit)
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            workouts = details,
+                            filteredWorkouts = filterList(details, it.searchQuery),
+                            availableExercises = exercises,
+                            selectedExerciseId = defaultExercise?.id,
+                            exerciseRecords = records,
+                            bestPrString = prString
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                        )
+                    }
                 }
-
-                val defaultExercise = _uiState.value.selectedExerciseId?.let { id -> exercises.firstOrNull { it.id == id } }
-                    ?: exercises.firstOrNull()
-
-                val (records, prString) = computeExerciseRecords(workouts, defaultExercise?.id, _uiState.value.recordLimit)
-
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        workouts = details,
-                        filteredWorkouts = filterList(details, it.searchQuery),
-                        availableExercises = exercises,
-                        selectedExerciseId = defaultExercise?.id,
-                        exerciseRecords = records,
-                        bestPrString = prString
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Error al cargar historial de entrenamientos."
+                        errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
                     )
                 }
             }

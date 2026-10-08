@@ -33,35 +33,44 @@ class ExercisesViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            val exercisesResult = exerciseRepository.getExercises()
-            val workoutsResult = workoutRepository.getWorkouts()
+            try {
+                val exercisesResult = exerciseRepository.getExercises()
+                val workoutsResult = workoutRepository.getWorkouts()
 
-            if (exercisesResult.isSuccess && workoutsResult.isSuccess) {
-                val exercises = exercisesResult.getOrDefault(emptyList())
-                val workouts = workoutsResult.getOrDefault(emptyList())
+                if (exercisesResult.isSuccess && workoutsResult.isSuccess) {
+                    val exercises = exercisesResult.getOrDefault(emptyList())
+                    val workouts = workoutsResult.getOrDefault(emptyList())
 
-                val cardDataList = exercises.sortedBy { it.name.lowercase() }.map { exercise ->
-                    val history = getExerciseHistoryUseCase(exercise.id, workouts)
-                    val max1Rm = history.maxOfOrNull { it.estimated1Rm } ?: 0.0
-                    ExerciseCardData(
-                        exercise = exercise,
-                        maxEstimated1Rm = max1Rm,
-                        history = history
-                    )
+                    val cardDataList = exercises.sortedBy { it.name.lowercase() }.map { exercise ->
+                        val history = getExerciseHistoryUseCase(exercise.id, workouts)
+                        val max1Rm = history.maxOfOrNull { it.estimated1Rm } ?: 0.0
+                        ExerciseCardData(
+                            exercise = exercise,
+                            maxEstimated1Rm = max1Rm,
+                            history = history
+                        )
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            exercises = cardDataList,
+                            filteredExercises = applyFilters(cardDataList, it.searchQuery, it.selectedMuscleGroup)
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                        )
+                    }
                 }
-
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        exercises = cardDataList,
-                        filteredExercises = applyFilters(cardDataList, it.searchQuery, it.selectedMuscleGroup)
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Error al cargar ejercicios."
+                        errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
                     )
                 }
             }

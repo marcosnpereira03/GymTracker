@@ -41,51 +41,60 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            val workoutsResult = workoutRepository.getWorkouts()
-            val weightsResult = profileRepository.getBodyWeightLogs()
-            val exercisesResult = exerciseRepository.getExercises()
+            try {
+                val workoutsResult = workoutRepository.getWorkouts()
+                val weightsResult = profileRepository.getBodyWeightLogs()
+                val exercisesResult = exerciseRepository.getExercises()
 
-            if (workoutsResult.isSuccess && weightsResult.isSuccess) {
-                val workouts = workoutsResult.getOrDefault(emptyList())
-                val weights = weightsResult.getOrDefault(emptyList())
-                val exercises = exercisesResult.getOrDefault(emptyList())
-                val exerciseMap = exercises.associateBy { it.id }
+                if (workoutsResult.isSuccess && weightsResult.isSuccess) {
+                    val workouts = workoutsResult.getOrDefault(emptyList())
+                    val weights = weightsResult.getOrDefault(emptyList())
+                    val exercises = exercisesResult.getOrDefault(emptyList())
+                    val exerciseMap = exercises.associateBy { it.id }
 
-                val recentItems = workouts.take(5).map { workout ->
-                    val orderedExerciseIds = mutableListOf<String>()
-                    workout.sets.forEach { set ->
-                        if (!orderedExerciseIds.contains(set.exerciseId)) {
-                            orderedExerciseIds.add(set.exerciseId)
+                    val recentItems = workouts.take(5).map { workout ->
+                        val orderedExerciseIds = mutableListOf<String>()
+                        workout.sets.forEach { set ->
+                            if (!orderedExerciseIds.contains(set.exerciseId)) {
+                                orderedExerciseIds.add(set.exerciseId)
+                            }
                         }
+                        val summary = orderedExerciseIds.map { exId ->
+                            val count = workout.sets.count { it.exerciseId == exId }
+                            val name = exerciseMap[exId]?.name ?: "Ejercicio"
+                            Pair(count, name)
+                        }
+                        HomeWorkoutItem(
+                            workout = workout,
+                            exercisesSummary = summary
+                        )
                     }
-                    val summary = orderedExerciseIds.map { exId ->
-                        val count = workout.sets.count { it.exerciseId == exId }
-                        val name = exerciseMap[exId]?.name ?: "Ejercicio"
-                        Pair(count, name)
+
+                    val latest = workouts.firstOrNull()
+                    val latestVolume = latest?.let { calculateWorkoutVolumeUseCase(it) } ?: 0.0
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            latestWorkout = latest,
+                            latestWeight = weights.firstOrNull(),
+                            recentWorkouts = recentItems,
+                            totalVolumeLatestWorkout = latestVolume
+                        )
                     }
-                    HomeWorkoutItem(
-                        workout = workout,
-                        exercisesSummary = summary
-                    )
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
+                        )
+                    }
                 }
-
-                val latest = workouts.firstOrNull()
-                val latestVolume = latest?.let { calculateWorkoutVolumeUseCase(it) } ?: 0.0
-
+            } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        latestWorkout = latest,
-                        latestWeight = weights.firstOrNull(),
-                        recentWorkouts = recentItems,
-                        totalVolumeLatestWorkout = latestVolume
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Error al cargar datos del dashboard. Desliza para reintentar."
+                        errorMessage = "No se pudo establecer la conexión con el servidor. Verifica tu conexión a internet."
                     )
                 }
             }
