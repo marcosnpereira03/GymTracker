@@ -25,4 +25,14 @@ interface ExerciseRepository {
      * Crea un nuevo ejercicio personalizado en el catálogo.
      */
     suspend fun createExercise(exercise: Exercise): Result<Exercise>
+
+    /**
+     * Actualiza los datos de un ejercicio existente.
+     */
+    suspend fun updateExercise(exercise: Exercise): Result<Exercise>
+
+    /**
+     * Elimina un ejercicio del catálogo por su ID.
+     */
+    suspend fun deleteExercise(id: String): Result<Unit>
 }

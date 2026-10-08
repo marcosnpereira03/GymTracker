@@ -117,6 +117,25 @@ class ExercisesViewModel(
         }
     }
 
+    fun onUpdateExercise(exercise: Exercise) {
+        if (exercise.name.isBlank()) return
+        viewModelScope.launch {
+            val result = exerciseRepository.updateExercise(exercise)
+            if (result.isSuccess) {
+                loadExercises()
+            }
+        }
+    }
+
+    fun onDeleteExercise(exerciseId: String) {
+        viewModelScope.launch {
+            val result = exerciseRepository.deleteExercise(exerciseId)
+            if (result.isSuccess) {
+                loadExercises()
+            }
+        }
+    }
+
     private fun applyFilters(
         list: List<ExerciseCardData>,
         query: String,

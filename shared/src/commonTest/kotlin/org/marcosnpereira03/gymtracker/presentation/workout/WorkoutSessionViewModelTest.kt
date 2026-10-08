@@ -54,6 +54,8 @@ class WorkoutSessionViewModelTest {
         override suspend fun searchExercises(query: String): Result<List<Exercise>> = Result.success(fakeExercises.filter { it.name.contains(query, ignoreCase = true) })
         override suspend fun getExerciseById(id: String): Result<Exercise> = Result.success(fakeExercises.first { it.id == id })
         override suspend fun createExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+        override suspend fun updateExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+        override suspend fun deleteExercise(id: String): Result<Unit> = Result.success(Unit)
     }
 
     private lateinit var viewModel: WorkoutSessionViewModel

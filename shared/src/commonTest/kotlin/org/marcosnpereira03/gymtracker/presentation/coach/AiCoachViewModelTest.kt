@@ -73,6 +73,8 @@ class AiCoachViewModelTest {
             override suspend fun searchExercises(query: String): Result<List<Exercise>> = Result.success(emptyList())
             override suspend fun getExerciseById(id: String): Result<Exercise> = Result.failure(NoSuchElementException())
             override suspend fun createExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+            override suspend fun updateExercise(exercise: Exercise): Result<Exercise> = Result.success(exercise)
+            override suspend fun deleteExercise(id: String): Result<Unit> = Result.success(Unit)
         }
         val fakeWorkoutRepo = object : WorkoutRepository {
             override suspend fun getWorkouts(): Result<List<Workout>> = Result.success(emptyList())
