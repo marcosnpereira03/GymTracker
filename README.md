@@ -166,17 +166,45 @@ Flujo del Pipeline de CI:
 
 ## 5. Herramientas de IA y Metodología de Desarrollo
 
-El desarrollo de GymTracker se estructuró adoptando un enfoque de ingeniería asistida por Inteligencia Artificial:
+El desarrollo de **GymTracker** se ejecutó bajo un enfoque de **Ingeniería de Software Acelerada por Inteligencia Artificial**, donde la IA no actúa como un generador desatendido, sino como un **copiloto de alta velocidad orquestado y auditado continuamente por el criterio del ingeniero**.
 
-### 1. Antigravity IDE & AI Assistant (Google DeepMind)
-* **Arquitectura y Estructura KMP**: Configuración modular Gradle, inyección con **Koin** y scaffolding de capas Clean Architecture.
-* **Modelado y Mappers Bidireccionales**: Generación precisa de DTOs serializables con `@SerialName` alineados con el esquema relacional de Supabase.
-* **Componentes Gráficos en Canvas**: Diseño de curvas cúbicas de Bézier, sombreado degradado y cuadrículas analíticas en Compose Canvas.
-* **Cobertura de Tests Unitarios**: Redacción de suites de tests unitarios exhaustivas en `commonTest`.
 
-### 2. Google Gemini API (Coach de IA Integrado en la App)
-* **Asesoramiento Personalizado en Tiempo Real**: Cliente `GeminiApiClient` y caso de uso `BuildAiUserDataContextUseCase` que estructuran el contexto del usuario para alimentar el modelo de lenguaje (`gemini-flash-lite-latest` y fallbacks).
-* **Resiliencia ante Sobrecarga**: Manejo transparente de límites de tasa (429/503) con reintento automático mientras la UI muestra el estado de pensamiento activo.
+---
+
+### 1. La Utilidad de la IA vs. La Programación Tradicional
+En el desarrollo de software tradicional sin herramientas de IA, gran parte del tiempo de un desarrollador se consume en **tareas mecánicas y repetitivas**: redacción manual de *Data Transfer Objects* (DTOs), funciones de mapeo bidireccional, estructuración de archivos de configuración Gradle, boilerplate de inyección de dependencias y redacción línea por línea de componentes visuales declarativos.
+
+La adopción de IA como asistente generativo transformó radicalmente este paradigma:
+* **Velocidad de Entrega Exponencial:** Tareas que tradicionalmente demandaban semanas de desarrollo manual (como crear desde cero una app KMP completa para dos plataformas con persistencia en la nube, auth, canvas y tests) se alcanzaron en pocos días con calidad de producción.
+* **Foco en el Valor y la Arquitectura:** Al delegar la escritura del código base repetitivo a la IA, el tiempo y energía mental del ingeniero se enfocan en lo que realmente importa: el diseño arquitectónico, la solidez del dominio, las fórmulas matemáticas y la experiencia de usuario.
+* **Cobertura Rápida de Pruebas Unitarias:** La generación ágil de casos de prueba con múltiples combinaciones de entrada permitió blindar los casos de uso matemáticos en una fracción del tiempo habitual.
+
+---
+
+### 2. El Ingeniero como Orquestador y la Necesidad de Criterio Propio
+El uso de IA **no reemplaza el conocimiento técnico ni la rigurosidad de ingeniería**. Un modelo generativo sin supervisión puede introducir errores sutiles o código inviable si se aplica *copy-paste* sin auditoría:
+
+1. **Restricciones Multiplataforma Estrictas (KMP):**
+   * *Riesgo de la IA:* Los LLMs tienden frecuentemente a sugerir librerías exclusivas de la JVM/Android (`java.time.LocalDate`, `java.util.UUID`, `java.util.Date`, `ViewModel` de AndroidX nativo) dentro del código compartido.
+   * *Criterio y Corrección:* El ingeniero impuso directivas estrictas para forzar el uso exclusivo de `kotlinx.datetime`, `kotlin.uuid.Uuid`, `lifecycle-viewmodel-compose` y Koin multiplataforma en `commonMain`, asegurando compatibilidad 100% nativa con iOS.
+2. **Corrección de Problemas de Zona Horaria y Persistencia:**
+   * *Riesgo de la IA:* Conversión directa de `Instant` a texto mediante `toString().substringBefore("T")`, lo cual evalúa en UTC 00:00:00Z y provoca que los entrenamientos guardados a altas horas de la noche en Argentina (UTC-3) se guarden con la fecha del día siguiente.
+   * *Criterio y Corrección:* Se diseñó un helper centralizado `DateTimeUtil` que contextualiza el instante temporal contra la zona horaria del sistema del usuario (`TimeZone.currentSystemDefault()`) y parsea fechas al mediodía UTC (`T12:00:00Z`) para garantizar invariabilidad de calendario.
+3. **Manejo de Recomposiciones y Rendimiento en Compose:**
+   * *Riesgo de la IA:* Generación de listas `LazyColumn` sin definir claves de identidad (`key`), provocando recomposiciones pesadas y saltos de scroll.
+   * *Criterio y Corrección:* Se estructuraron todos los bloques `items(items = list, key = { it.id })` y se garantizó la inmutabilidad de todas las data classes de `UiState`.
+4. **Resiliencia ante Fallos de Red y Cero Crashes:**
+   * *Riesgo de la IA:* Asumir respuestas exitosas inmediatas de red en Supabase o Gemini sin control de excepciones.
+   * *Criterio y Corrección:* Toda interacción con la nube fue encapsulada en bloques `runCatching`/`try-catch`, actualizando estados visuales con `ErrorMessage` y botones de reintento para que la aplicación jamás sufra un cierre inesperado.
+
+---
+
+### 3. Google Gemini API: Inteligencia Artificial Integrada en el Producto
+Además de utilizar IA en el proceso de desarrollo, la aplicación integra el modelo **Google Gemini** como feature central:
+* **Contexto Dinámico en Tiempo Real:** Mediante el caso de uso `BuildAiUserDataContextUseCase`, la aplicación consolida el peso actual del usuario, su catálogo de ejercicios y sus últimas 15 sesiones de entrenamiento para inyectarlos en el prompt del sistema.
+* **Entrenador Personal Adaptativo:** El usuario puede consultar recomendaciones sobre volumen, descansos, técnicas de sobrecarga progresiva y ajustes de rutina basados exactamente en sus datos históricos reales.
+* **Manejo Inteligente de Cuotas:** Implementación de reintentos automáticos y soporte para fallbacks de modelos (`gemini-flash-lite-latest` y variantes) para mantener siempre una respuesta fluida sin bloquear la UI.
+
 
 ---
 
@@ -219,7 +247,8 @@ Si deseas conectar tu propia instancia de Supabase:
 1. Accede al **SQL Editor** en tu panel de Supabase.
 2. Ejecuta el script de migración ubicado en:
    [`supabase/migrations/01_initial_schema.sql`](supabase/migrations/01_initial_schema.sql)
-3. Esto configurará las tablas (`ejercicios`, `entrenamientos`, `series_realizadas`, `pesajes`), los índices de rendimiento y las políticas de seguridad (RLS).
+   [`supabase/migrations/01_initial_schema.sql`](supabase/migrations/02_storage_avatars.sql)
+4. Esto configurará las tablas (`ejercicios`, `entrenamientos`, `series_realizadas`, `pesajes`), los índices de rendimiento y las políticas de seguridad (RLS).
 
 ---
 
