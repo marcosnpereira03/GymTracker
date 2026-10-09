@@ -20,25 +20,27 @@ class ExerciseRepositoryImpl(
 
     // Catálogo por defecto con UUIDs deterministas para arranque rápido y compatibilidad con Foreign Keys de Supabase
     private val defaultExercises = listOf(
-        Exercise(id = UuidUtil.ensureUuid("ex-1"), name = "Press de Banca Plano", muscleGroup = "Pecho"),
-        Exercise(id = UuidUtil.ensureUuid("ex-2"), name = "Press Inclinado con Mancuernas", muscleGroup = "Pecho"),
-        Exercise(id = UuidUtil.ensureUuid("ex-3"), name = "Aperturas en Polea (Cruces)", muscleGroup = "Pecho"),
-        Exercise(id = UuidUtil.ensureUuid("ex-4"), name = "Sentadilla con Barra (Back Squat)", muscleGroup = "Piernas"),
-        Exercise(id = UuidUtil.ensureUuid("ex-5"), name = "Prensa de Piernas 45°", muscleGroup = "Piernas"),
-        Exercise(id = UuidUtil.ensureUuid("ex-6"), name = "Extensión de Cuádriceps", muscleGroup = "Piernas"),
-        Exercise(id = UuidUtil.ensureUuid("ex-7"), name = "Curl Femoral Tumbado", muscleGroup = "Piernas"),
-        Exercise(id = UuidUtil.ensureUuid("ex-8"), name = "Dominadas Lastradas", muscleGroup = "Espalda"),
-        Exercise(id = UuidUtil.ensureUuid("ex-9"), name = "Remo con Barra", muscleGroup = "Espalda"),
-        Exercise(id = UuidUtil.ensureUuid("ex-10"), name = "Jalón al Pecho", muscleGroup = "Espalda"),
-        Exercise(id = UuidUtil.ensureUuid("ex-11"), name = "Peso Muerto Convencional", muscleGroup = "Espalda"),
-        Exercise(id = UuidUtil.ensureUuid("ex-12"), name = "Press Militar con Barra (Overhead)", muscleGroup = "Hombros"),
-        Exercise(id = UuidUtil.ensureUuid("ex-13"), name = "Elevaciones Laterales", muscleGroup = "Hombros"),
-        Exercise(id = UuidUtil.ensureUuid("ex-14"), name = "Pájaros / Deltoides Posterior", muscleGroup = "Hombros"),
-        Exercise(id = UuidUtil.ensureUuid("ex-15"), name = "Curl de Bíceps con Barra Z", muscleGroup = "Bíceps"),
-        Exercise(id = UuidUtil.ensureUuid("ex-16"), name = "Curl Martillo", muscleGroup = "Bíceps"),
-        Exercise(id = UuidUtil.ensureUuid("ex-17"), name = "Press Francés", muscleGroup = "Tríceps"),
-        Exercise(id = UuidUtil.ensureUuid("ex-18"), name = "Extensión de Tríceps en Polea Alta", muscleGroup = "Tríceps")
+        Exercise(id = UuidUtil.ensureUuid("ex-1"), name = "Press de Banca Plano", muscleGroup = "Pecho", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-2"), name = "Press Inclinado con Mancuernas", muscleGroup = "Pecho", equipment = "Mancuernas"),
+        Exercise(id = UuidUtil.ensureUuid("ex-3"), name = "Aperturas en Polea (Cruces)", muscleGroup = "Pecho", equipment = "Polea"),
+        Exercise(id = UuidUtil.ensureUuid("ex-4"), name = "Sentadilla con Barra (Back Squat)", muscleGroup = "Cuádriceps", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-5"), name = "Prensa de Piernas 45°", muscleGroup = "Cuádriceps", equipment = "Máquina"),
+        Exercise(id = UuidUtil.ensureUuid("ex-6"), name = "Extensión de Cuádriceps", muscleGroup = "Cuádriceps", equipment = "Máquina"),
+        Exercise(id = UuidUtil.ensureUuid("ex-7"), name = "Curl Femoral Tumbado", muscleGroup = "Isquios", equipment = "Máquina"),
+        Exercise(id = UuidUtil.ensureUuid("ex-8"), name = "Dominadas Lastradas", muscleGroup = "Espalda", equipment = "Peso libre"),
+        Exercise(id = UuidUtil.ensureUuid("ex-9"), name = "Remo con Barra", muscleGroup = "Espalda", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-10"), name = "Jalón al Pecho", muscleGroup = "Espalda", equipment = "Polea"),
+        Exercise(id = UuidUtil.ensureUuid("ex-11"), name = "Peso Muerto Rumano", muscleGroup = "Isquios", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-12"), name = "Press Militar con Barra (Overhead)", muscleGroup = "Hombros", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-13"), name = "Elevaciones Laterales", muscleGroup = "Hombros", equipment = "Mancuernas"),
+        Exercise(id = UuidUtil.ensureUuid("ex-14"), name = "Pájaros / Deltoides Posterior", muscleGroup = "Hombros", equipment = "Mancuernas"),
+        Exercise(id = UuidUtil.ensureUuid("ex-15"), name = "Curl de Bíceps con Barra Z", muscleGroup = "Bíceps", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-16"), name = "Curl Martillo", muscleGroup = "Bíceps", equipment = "Mancuernas"),
+        Exercise(id = UuidUtil.ensureUuid("ex-17"), name = "Press Francés", muscleGroup = "Tríceps", equipment = "Barra"),
+        Exercise(id = UuidUtil.ensureUuid("ex-18"), name = "Extensión de Tríceps en Polea Alta", muscleGroup = "Tríceps", equipment = "Polea")
     )
+
+    private val deletedExerciseIds = mutableSetOf<String>()
 
     private val inMemoryCache = mutableListOf<Exercise>().apply {
         addAll(defaultExercises)
@@ -52,27 +54,35 @@ class ExerciseRepositoryImpl(
                     .decodeList<ExerciseDto>()
                     .map { it.toDomain() }
 
-                if (remoteList.isNotEmpty()) {
-                    inMemoryCache.clear()
-                    inMemoryCache.addAll(remoteList.sortedBy { it.name.lowercase() })
-                    inMemoryCache.toList()
-                } else {
-                    // Si Supabase no tiene ejercicios aún para este usuario, auto-sembrar los iniciales
-                    val currentUserId = supabaseClient.auth.currentUserOrNull()?.id
-                    if (currentUserId != null) {
-                        try {
-                            val defaultDtos = defaultExercises.map { it.toDto(currentUserId) }
-                            supabaseClient.from("ejercicios").upsert(defaultDtos)
-                        } catch (e: Exception) {
-                            println("Supabase seed error: ${e.message}")
-                        }
+                // Unificamos el catálogo base predeterminado con los ejercicios remotos del usuario
+                val combinedMap = defaultExercises
+                    .filterNot { it.id in deletedExerciseIds }
+                    .associateBy { it.id }
+                    .toMutableMap()
+
+                remoteList
+                    .filterNot { it.id in deletedExerciseIds }
+                    .forEach { remoteEx ->
+                        combinedMap[remoteEx.id] = remoteEx
                     }
-                    inMemoryCache.sortedBy { it.name.lowercase() }
-                }
+
+                val fullList = combinedMap.values.sortedBy { it.name.lowercase() }
+
+                inMemoryCache.clear()
+                inMemoryCache.addAll(fullList)
+                fullList
             } catch (e: Exception) {
                 println("Error fetching exercises from Supabase: ${e.message}")
-                // Si la red falla, respondemos con la caché resiliente
-                inMemoryCache.sortedBy { it.name.lowercase() }
+                val combinedMap = defaultExercises
+                    .filterNot { it.id in deletedExerciseIds }
+                    .associateBy { it.id }
+                    .toMutableMap()
+                inMemoryCache
+                    .filterNot { it.id in deletedExerciseIds }
+                    .forEach { cachedEx ->
+                        combinedMap[cachedEx.id] = cachedEx
+                    }
+                combinedMap.values.sortedBy { it.name.lowercase() }
             }
         }
     }
@@ -136,6 +146,8 @@ class ExerciseRepositoryImpl(
     override suspend fun deleteExercise(id: String): Result<Unit> {
         return runCatching {
             val validId = UuidUtil.ensureUuid(id)
+            deletedExerciseIds.add(validId)
+            deletedExerciseIds.add(id)
             try {
                 supabaseClient.from("ejercicios").delete {
                     filter {

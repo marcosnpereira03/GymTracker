@@ -309,15 +309,36 @@ class WorkoutSessionViewModel(
         }
     }
 
+    private fun getDefaultSetValues(exerciseId: String, currentSets: List<EditableSet>): Triple<String, String, Int> {
+        val previousSetOfSameExercise = currentSets.lastOrNull { it.exerciseId == exerciseId }
+        if (previousSetOfSameExercise != null) {
+            return Triple(
+                previousSetOfSameExercise.weightText,
+                previousSetOfSameExercise.repsText,
+                previousSetOfSameExercise.rir
+            )
+        }
+
+        val pastSession = getPastSessionsForExercise(exerciseId, limit = 1).firstOrNull()
+        val pastSet = pastSession?.sets?.firstOrNull()
+        if (pastSet != null) {
+            val weightStr = if (pastSet.weightKg % 1.0 == 0.0) "${pastSet.weightKg.toInt()}" else "${pastSet.weightKg}"
+            return Triple(
+                weightStr,
+                pastSet.reps.toString(),
+                pastSet.rir.coerceIn(0, 10)
+            )
+        }
+
+        return Triple("60", "10", 2)
+    }
+
     fun onAddSet() {
         val selected = _uiState.value.selectedExercise ?: return
         val currentSets = _uiState.value.sets
         val exerciseSetsCount = currentSets.count { it.exerciseId == selected.id }
         
-        val previousSetOfSameExercise = currentSets.lastOrNull { it.exerciseId == selected.id }
-        val defaultWeight = previousSetOfSameExercise?.weightText ?: "60"
-        val defaultReps = previousSetOfSameExercise?.repsText ?: "10"
-        val defaultRir = previousSetOfSameExercise?.rir ?: 2
+        val (defaultWeight, defaultReps, defaultRir) = getDefaultSetValues(selected.id, currentSets)
 
         val w = defaultWeight.toDoubleOrNull() ?: 0.0
         val r = defaultReps.toIntOrNull() ?: 0
@@ -353,10 +374,7 @@ class WorkoutSessionViewModel(
             ?: _uiState.value.availableExercises.firstOrNull { it.id == exerciseId }?.name 
             ?: "Ejercicio"
         
-        val lastSet = exerciseSets.lastOrNull()
-        val defaultWeight = lastSet?.weightText ?: "50"
-        val defaultReps = lastSet?.repsText ?: "10"
-        val defaultRir = lastSet?.rir ?: 1
+        val (defaultWeight, defaultReps, defaultRir) = getDefaultSetValues(exerciseId, currentSets)
 
         val w = defaultWeight.toDoubleOrNull() ?: 0.0
         val r = defaultReps.toIntOrNull() ?: 0

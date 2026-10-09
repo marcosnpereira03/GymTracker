@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.domain.model.Workout
+import org.marcosnpereira03.gymtracker.domain.model.WorkoutSet
 import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
 import org.marcosnpereira03.gymtracker.domain.usecase.CalculateOneRepMaxUseCase
@@ -145,5 +146,57 @@ class WorkoutSessionViewModelTest {
         assertTrue(state.isSavedSuccess)
         assertFalse(state.isSaving)
         assertEquals(1, fakeWorkoutRepository.savedWorkouts.size)
+    }
+
+    @Test
+    fun `adding exercise with past history preloads latest weight reps and rir`() = runTest(testDispatcher) {
+        // Prepare past workout with historical set
+        fakeWorkoutRepository.savedWorkouts.add(
+            Workout(
+                id = "past-w1",
+                title = "Sesión anterior",
+                date = kotlin.time.Instant.fromEpochMilliseconds(1700000000000),
+                sets = listOf(
+                    WorkoutSet(
+                        id = "past-s1",
+                        workoutId = "past-w1",
+                        exerciseId = "e1",
+                        setNumber = 1,
+                        weightKg = 85.0,
+                        reps = 8,
+                        rir = 1
+                    )
+                )
+            )
+        )
+
+        viewModel.initSession()
+        advanceUntilIdle()
+
+        // Add set for e1 (Press Banca which has past history)
+        viewModel.onAddSet()
+        val state = viewModel.uiState.value
+        assertEquals(1, state.sets.size)
+        val set = state.sets[0]
+        assertEquals("85", set.weightText)
+        assertEquals("8", set.repsText)
+        assertEquals(1, set.rir)
+    }
+
+    @Test
+    fun `adding exercise without past history uses default values`() = runTest(testDispatcher) {
+        viewModel.initSession()
+        advanceUntilIdle()
+
+        // Select e2 (Sentadilla which has NO past history)
+        viewModel.onSelectExercise(fakeExercises[1])
+        viewModel.onAddSet()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.sets.size)
+        val set = state.sets[0]
+        assertEquals("60", set.weightText)
+        assertEquals("10", set.repsText)
+        assertEquals(2, set.rir)
     }
 }

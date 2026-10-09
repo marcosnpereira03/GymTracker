@@ -132,6 +132,24 @@ class ExercisesViewModelTest {
     }
 
     @Test
+    fun `creates custom exercise with equipment successfully`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.onCreateCustomExercise(
+            name = "Hip Thrust con Barra",
+            muscleGroup = "Glúteos",
+            equipment = "Barra"
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(5, state.exercises.size)
+        val created = state.exercises.find { it.exercise.name == "Hip Thrust con Barra" }
+        assertEquals("Glúteos", created?.exercise?.muscleGroup)
+        assertEquals("Barra", created?.exercise?.equipment)
+    }
+
+    @Test
     fun `deletes exercise successfully`() = runTest(testDispatcher) {
         advanceUntilIdle()
 

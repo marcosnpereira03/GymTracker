@@ -12,10 +12,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -54,6 +58,7 @@ import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 import org.marcosnpereira03.gymtracker.presentation.util.rememberImagePickerLauncher
 import org.marcosnpereira03.gymtracker.presentation.util.rememberRemoteImage
+import kotlinx.datetime.*
 
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -79,8 +84,8 @@ fun ProfileScreen(
     if (showLogWeightDialog) {
         LogWeightDialog(
             onDismiss = { showLogWeightDialog = false },
-            onConfirm = { weight, notes ->
-                viewModel.onAddWeightLog(weight, notes)
+            onConfirm = { weight, notes, date ->
+                viewModel.onAddWeightLog(weight, notes, date)
                 showLogWeightDialog = false
             }
         )
@@ -1600,10 +1605,33 @@ fun EditProfileDialog(
 @Composable
 fun LogWeightDialog(
     onDismiss: () -> Unit,
-    onConfirm: (weightKg: Double, notes: String?) -> Unit
+    onConfirm: (weightKg: Double, notes: String?, date: kotlin.time.Instant) -> Unit
 ) {
     var weightText by remember { mutableStateOf("") }
     var notesText by remember { mutableStateOf("") }
+    val todayDate = remember { org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.today() }
+    var selectedDate by remember { mutableStateOf(todayDate) }
+    var displayedYear by remember { mutableStateOf(todayDate.year) }
+    var displayedMonth by remember { mutableStateOf(todayDate.month.ordinal + 1) }
+
+    val monthNames = listOf(
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    )
+    val monthTitle = "${monthNames.getOrElse(displayedMonth - 1) { "Mes" }} de $displayedYear"
+
+    // Calcular días en el mes mostrado
+    val isLeap = (displayedYear % 4 == 0 && displayedYear % 100 != 0) || (displayedYear % 400 == 0)
+    val totalDays = when (displayedMonth) {
+        1, 3, 5, 7, 8, 10, 12 -> 31
+        4, 6, 9, 11 -> 30
+        2 -> if (isLeap) 29 else 28
+        else -> 31
+    }
+
+    val firstDayOfMonth = kotlinx.datetime.LocalDate(displayedYear, displayedMonth, 1)
+    val startOffset = firstDayOfMonth.dayOfWeek.ordinal // 0=LU, 1=MA, 2=MI, 3=JU, 4=VI, 5=SÁ, 6=DO
+    val rows = (totalDays + startOffset + 6) / 7
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1616,7 +1644,12 @@ fun LogWeightDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 OutlinedTextField(
                     value = weightText,
                     onValueChange = { weightText = it },
@@ -1634,6 +1667,159 @@ fun LogWeightDialog(
                         unfocusedContainerColor = Zinc900
                     )
                 )
+
+                // Calendario interactivo integrado
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Zinc950),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Zinc800)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        // Header del mes con botones de navegación
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = monthTitle,
+                                color = White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable {
+                                            if (displayedMonth == 1) {
+                                                displayedMonth = 12
+                                                displayedYear -= 1
+                                            } else {
+                                                displayedMonth -= 1
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                        contentDescription = "Mes anterior",
+                                        tint = Zinc400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable {
+                                            if (displayedMonth == 12) {
+                                                displayedMonth = 1
+                                                displayedYear += 1
+                                            } else {
+                                                displayedMonth += 1
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Mes siguiente",
+                                        tint = Zinc400,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Encabezado de días de la semana
+                        val daysOfWeek = listOf("LU", "MA", "MI", "JU", "VI", "SÁ", "DO")
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            daysOfWeek.forEach { day ->
+                                Text(
+                                    text = day,
+                                    color = Zinc500,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Grid de días del mes
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            for (row in 0 until rows) {
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    for (col in 0 until 7) {
+                                        val dayNumber = (row * 7 + col) - startOffset + 1
+                                        if (dayNumber in 1..totalDays) {
+                                            val isSelected = selectedDate.year == displayedYear &&
+                                                    (selectedDate.month.ordinal + 1) == displayedMonth &&
+                                                    selectedDate.day == dayNumber
+                                            val isToday = todayDate.year == displayedYear &&
+                                                    (todayDate.month.ordinal + 1) == displayedMonth &&
+                                                    todayDate.day == dayNumber
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(
+                                                        when {
+                                                            isSelected -> Emerald400
+                                                            isToday -> Zinc800
+                                                            else -> Color.Transparent
+                                                        }
+                                                    )
+                                                    .clickable {
+                                                        selectedDate = kotlinx.datetime.LocalDate(displayedYear, displayedMonth, dayNumber)
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "$dayNumber",
+                                                    color = when {
+                                                        isSelected -> Color.Black
+                                                        isToday -> Emerald400
+                                                        else -> White
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        } else {
+                                            Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Indicador de fecha seleccionada
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Fecha seleccionada:", color = Zinc400, fontSize = 12.sp)
+                    Text(
+                        text = selectedDate.toString(),
+                        color = Emerald400,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
                 OutlinedTextField(
                     value = notesText,
@@ -1657,7 +1843,8 @@ fun LogWeightDialog(
             Button(
                 onClick = {
                     val w = weightText.replace(',', '.').toDoubleOrNull() ?: 0.0
-                    onConfirm(w, notesText)
+                    val parsedInstant = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.parseDateOrNow(selectedDate.toString())
+                    onConfirm(w, notesText, parsedInstant)
                 },
                 enabled = weightText.replace(',', '.').toDoubleOrNull() != null && (weightText.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0,
                 colors = ButtonDefaults.buttonColors(

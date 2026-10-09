@@ -49,8 +49,8 @@ fun ExercisesScreen(
         CreateExerciseDialog(
             muscleGroups = state.muscleGroups.filterNot { it == "Todos" },
             onDismiss = { showCreateDialog = false },
-            onConfirm = { name, muscle ->
-                viewModel.onCreateCustomExercise(name, muscle)
+            onConfirm = { name, muscle, equipment ->
+                viewModel.onCreateCustomExercise(name, muscle, equipment)
                 showCreateDialog = false
             }
         )
@@ -153,7 +153,7 @@ fun ExercisesScreen(
             )
 
             // Chips de filtro por grupo muscular (horizontal scroll)
-            val defaultFilterCategories = listOf("Todos", "Pecho", "Espalda", "Cuádriceps", "Isquios", "Glúteos", "Hombros", "Bíceps", "Tríceps")
+            val defaultFilterCategories = listOf("Todos", "Pecho", "Espalda", "Bíceps", "Tríceps", "Hombros", "Antebrazos", "Cuádriceps", "Isquios", "Glúteos", "Gemelos", "Aductores", "Abductores")
             val availableCategories = (listOf("Todos") + (state.muscleGroups.filterNot { it == "Todos" })).distinct()
             val categoriesToShow = if (availableCategories.size > 1) availableCategories else defaultFilterCategories
 
@@ -270,8 +270,13 @@ fun ExerciseItemCard(
                         letterSpacing = 0.5.sp
                     )
                     Spacer(modifier = Modifier.height(2.dp))
+                    val subtitle = if (!data.exercise.equipment.isNullOrBlank()) {
+                        "${data.exercise.muscleGroup} • ${data.exercise.equipment}"
+                    } else {
+                        data.exercise.muscleGroup
+                    }
                     Text(
-                        text = "${data.exercise.muscleGroup} • Máquina / Peso Libre",
+                        text = subtitle,
                         color = Zinc400,
                         fontSize = 12.sp
                     )
@@ -403,14 +408,17 @@ fun HistorySetRow(item: ExerciseHistoryItem) {
     }
 }
 
+private val defaultEquipmentOptions = listOf("Barra", "Mancuernas", "Polea", "Máquina", "Peso libre")
+
 @Composable
 fun CreateExerciseDialog(
     muscleGroups: List<String>,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, muscle: String) -> Unit
+    onConfirm: (name: String, muscle: String, equipment: String?) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var selectedMuscle by remember { mutableStateOf(muscleGroups.firstOrNull() ?: "Pecho") }
+    var selectedEquipment by remember { mutableStateOf("Barra") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -452,11 +460,30 @@ fun CreateExerciseDialog(
                         )
                     }
                 }
+
+                Text("Equipamiento:", color = Zinc400, fontSize = 12.sp)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(defaultEquipmentOptions) { eq ->
+                        val isSelected = selectedEquipment == eq
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedEquipment = eq },
+                            label = { Text(eq, fontSize = 11.sp) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Emerald400,
+                                selectedLabelColor = Color.Black,
+                                containerColor = Zinc800,
+                                labelColor = Zinc300
+                            )
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name, selectedMuscle) },
+                onClick = { onConfirm(name, selectedMuscle, selectedEquipment) },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = Emerald400, contentColor = Color.Black)
             ) {
@@ -481,6 +508,7 @@ fun EditExerciseDialog(
 ) {
     var name by remember { mutableStateOf(exercise.name) }
     var selectedMuscle by remember { mutableStateOf(exercise.muscleGroup) }
+    var selectedEquipment by remember { mutableStateOf(exercise.equipment ?: "Barra") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -522,12 +550,37 @@ fun EditExerciseDialog(
                         )
                     }
                 }
+
+                Text("Equipamiento:", color = Zinc400, fontSize = 12.sp)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(defaultEquipmentOptions) { eq ->
+                        val isSelected = selectedEquipment.equals(eq, ignoreCase = true)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedEquipment = eq },
+                            label = { Text(eq, fontSize = 11.sp) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Emerald400,
+                                selectedLabelColor = Color.Black,
+                                containerColor = Zinc800,
+                                labelColor = Zinc300
+                            )
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onConfirm(exercise.copy(name = name.trim(), muscleGroup = selectedMuscle.trim()))
+                    onConfirm(
+                        exercise.copy(
+                            name = name.trim(),
+                            muscleGroup = selectedMuscle.trim(),
+                            equipment = selectedEquipment.trim()
+                        )
+                    )
                 },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = Emerald400, contentColor = Color.Black)

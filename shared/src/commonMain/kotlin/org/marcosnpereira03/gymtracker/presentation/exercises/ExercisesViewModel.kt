@@ -102,13 +102,14 @@ class ExercisesViewModel(
         }
     }
 
-    fun onCreateCustomExercise(name: String, muscleGroup: String) {
+    fun onCreateCustomExercise(name: String, muscleGroup: String, equipment: String? = null) {
         if (name.isBlank()) return
         viewModelScope.launch {
             val newExercise = Exercise(
                 id = "custom-ex-${org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.now().toEpochMilliseconds()}",
                 name = name.trim(),
-                muscleGroup = muscleGroup.trim()
+                muscleGroup = muscleGroup.trim(),
+                equipment = equipment?.trim()?.ifBlank { null }
             )
             val result = exerciseRepository.createExercise(newExercise)
             if (result.isSuccess) {

@@ -21,7 +21,7 @@ data class ExercisesUiState(
     val filteredExercises: List<ExerciseCardData> = emptyList(),
     val searchQuery: String = "",
     val selectedMuscleGroup: String = "Todos",
-    val muscleGroups: List<String> = listOf("Todos", "Pecho", "Piernas", "Espalda", "Hombros", "Bíceps", "Tríceps"),
+    val muscleGroups: List<String> = listOf("Todos", "Pecho", "Espalda", "Bíceps", "Tríceps", "Hombros", "Antebrazos", "Cuádriceps", "Isquios", "Glúteos", "Gemelos", "Aductores", "Abductores"),
     val expandedExerciseId: String? = null,
     val isCreatingExercise: Boolean = false,
     val errorMessage: String? = null
