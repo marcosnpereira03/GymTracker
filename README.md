@@ -2,73 +2,145 @@
 
 ---
 
-## 1. ¿De qué trata el proyecto?
+## 1. ¿De qué trata el proyecto y por qué se diferencia de las demás apps?
 
-**GymTracker** es una aplicación móvil multiplataforma desarrollada con **Kotlin Multiplatform (KMP)** y **Compose Multiplatform** (Android & iOS), diseñada para el registro de alta precisión, análisis biométrico y seguimiento riguroso de la sobrecarga progresiva en atletas de fuerza e hipertrofia.
+**GymTracker** es una aplicación móvil multiplataforma desarrollada con **Kotlin Multiplatform (KMP)** y **Compose Multiplatform** (Android & iOS), diseñada para el registro de alta precisión, análisis biomecánico y seguimiento riguroso de la sobrecarga progresiva en atletas de fuerza e hipertrofia.
 
-### Problemática Resuelta
-Las aplicaciones tradicionales de registro suelen operar como simples blocs de notas digitales o planillas estáticas, careciendo de herramientas analíticas de nivel profesional:
-* **Falta de cuantificación del esfuerzo real**: No contemplan la proximidad al fallo muscular (**RIR — Reps In Reserve**).
-* **Desconexión analítica**: Dificultad para correlacionar el tonelaje de volumen acumulado con la distribución por grupo muscular o la tendencia del peso corporal.
-* **Falta de feedback inteligente**: Ausencia de orientación técnica automatizada basada en el historial del atleta.
-* **Fragilidad ante desconexión**: Bloqueo o pérdida de datos ante interrupciones de red.
+### ¿Por qué se diferencia de las apps tradicionales?
 
-### Funcionalidades Principales
-1. **Registro Granular de Entrenamientos**: Carga de series en tiempo real especificando peso ($\text{kg}$), repeticiones e intensidad subjetiva mediante $\text{RIR}$ ($0 \le \text{RIR} \le 10$).
-2. **Cálculo de 1RM Estimado Automatizado**: Proyección matemática de la repetición máxima en base a la fórmula de Epley ponderada por el esfuerzo en reserva, evitando someter al atleta a repeticiones máximas lesivas.
-3. **Analítica de Volumen y Composición Corporal**: Gráficos interactivos en tiempo real con filtrado temporal dinámico (Diario, Semanal, Mensual, Histórico) y renderizado de curvas de Bézier mediante Compose Canvas.
-4. **Coach de Inteligencia Artificial (Google Gemini)**: Entrenador personal interactivo integrado con la API de Gemini que analiza en tiempo real el catálogo de ejercicios y las sesiones registradas para ofrecer recomendaciones de entrenamiento.
-5. **Resiliencia Total y Modo Offline**: Sincronización transparente con PostgreSQL en Supabase protegida por Row-Level Security (RLS) y almacenamiento resiliente en memoria ante caídas de conexión.
+La mayoría de las aplicaciones comerciales operan como simples blocs de notas digitales o planillas estáticas sin rigor analítico:
+* **Ignoran la intensidad real**: Asumen que todas las repeticiones tienen el mismo costo metabólico, ignorando la proximidad al fallo muscular.
+* **Obligan a tests lesivos de 1RM**: Forzar a un atleta a levantar su peso máximo real a 1 repetición conlleva un alto riesgo de lesión articular y sobreentrenamiento.
+* **Carecen de análisis de volumen por grupo muscular**: No correlacionan el tonelaje acumulado con la distribución muscular ni con la evolución del peso corporal.
+* **Son frágiles sin conexión**: Fallan o bloquean la experiencia si se pierde la conexión en el gimnasio.
+
+En contraste, **GymTracker** fundamenta su seguimiento en **modelos matemáticos y biomecánicos en tiempo real**:
 
 ---
 
-## 2. ¿Qué arquitectura se eligió y por qué?
+### Fundamentos Científicos y Fórmulas Biomecánicas
 
-El proyecto implementa **Clean Architecture** junto con el patrón de presentación **MVVM (Model-View-ViewModel)** y **Unidirectional Data Flow (UDF)**, compartiendo el **100%** del código de lógica de negocio, datos y UI en `commonMain`.
+#### 1. Cálculo de 1RM Estimado Ajustado por Esfuerzo en Reserva (`CalculateOneRepMaxUseCase`)
+GymTracker proyecta la repetición máxima teórica utilizando la fórmula de **Epley** ponderada por el **RIR (Reps In Reserve)**, donde las repeticiones efectivas al fallo son $r_{\text{eff}} = \text{reps} + \text{rir}$:
+
+$$\text{1RM} = \text{peso\_kg} \times \left(1 + \frac{\text{reps} + \text{rir}}{30.0}\right)$$
+
+* **Casos base y restricciones de seguridad**:
+  * Si $\text{reps} = 1$ y $\text{rir} = 0$, el 1RM es exactamente $\text{peso\_kg}$.
+  * Si $\text{peso\_kg} \le 0$ o $\text{reps} \le 0$, retorna $0.0$.
+  * Rango válido estricto: $0 \le \text{RIR} \le 10$ ($0$ = fallo concéntrico absoluto, $2$ = 2 repeticiones antes del fallo).
+
+#### 2. Cálculo de Tonelaje Total y Sobrecarga Progresiva (`CalculateWorkoutVolumeUseCase`)
+Cuantifica la carga externa total de una sesión sumando el tonelaje de todas las series completadas:
+
+$$\text{Volumen Total (kg)} = \sum_{i=1}^{n} (\text{peso\_kg}_i \times \text{reps}_i)$$
+
+#### 3. Distribución del Volumen por Grupo Muscular (`CalculateMuscleGroupVolumeUseCase`)
+Agrupa y pondera el tonelaje entre los 12 grupos musculares anatómicos (*Pecho, Espalda, Bíceps, Tríceps, Hombros, Antebrazos, Cuádriceps, Isquios, Glúteos, Gemelos, Aductores, Abductores*), permitiendo detectar desbalances de volumen y optimizar la periodización.
+
+---
+
+### Funcionalidades Principales
+1. **Registro Granular de Entrenamientos**: Carga de series en tiempo real con peso ($\text{kg}$), repeticiones, RIR numérico y selección de equipamiento (*Barra, Mancuernas, Polea, Máquina, Peso libre*).
+2. **Precarga Inteligente de Historial**: Al añadir un ejercicio a la sesión, precarga automáticamente las cargas de la última vez que fue realizado.
+3. **Calendario Interactivo de Pesajes**: Registro del peso corporal en cualquier fecha histórica navegando mes a mes en un calendario interactivo.
+4. **Analítica Visual con Compose Canvas**: Gráficos interactivos en tiempo real con curvas de Bézier cúbicas y filtros temporales (Día, Semana, Mes, Histórico).
+5. **Coach de Inteligencia Artificial (Google Gemini)**: Entrenador interactivo conectado a la API de Gemini que analiza el historial del atleta para brindar feedback personalizado.
+6. **Resiliencia Total y Modo Offline**: Persistencia en Supabase PostgreSQL con Row-Level Security (RLS) y almacenamiento local con tolerancia a fallos.
+
+---
+
+## 2. Comparativa Arquitectónica: ¿Qué arquitectura se eligió y por qué?
+
+El proyecto implementa **Clean Architecture** estructurada en capas desacopladas, combinada con **MVVM (Model-View-ViewModel)** y **Unidirectional Data Flow (UDF)**. El **100%** de la lógica de negocio, datos y UI reside en `shared/src/commonMain/kotlin`.
 
 ```text
 shared/src/commonMain/kotlin/org/marcosnpereira03/gymtracker/
-├── domain/                          # PURO KOTLIN (Sin dependencias externas ni frameworks)
+├── domain/                          # PURO KOTLIN (Sin frameworks, UI ni dependencias de plataforma)
 │   ├── model/                       # Modelos inmutables (Workout, Exercise, WorkoutSet, BodyWeightLog)
-│   ├── repository/                  # Interfaces de abstracción de datos
+│   ├── repository/                  # Interfaces abstractas de repositorios
 │   └── usecase/                     # Lógica de negocio (CalculateOneRepMax, CalculateWorkoutVolume, etc.)
-├── data/                            # Implementación de datos y persistencia
-│   ├── remote/                      # Clientes HTTP (SupabaseClientFactory, GeminiApiClient, DTOs)
-│   ├── mapper/                      # Mapeo bidireccional entre DTOs y modelos de dominio
-│   └── repository/                  # Implementaciones de repositorios con caché y fallback offline
+├── data/                            # Implementación de persistencia y red
+│   ├── remote/                      # Clientes HTTP (Supabase Postgrest, Gemini REST API, DTOs)
+│   ├── mapper/                      # Mapeo bidireccional entre DTOs y entidades de dominio
+│   └── repository/                  # Implementación concreta de repositorios con caché offline
 ├── di/                              # Inyección de dependencias modular con Koin
 └── presentation/                    # UI Declarativa con Compose Multiplatform
-    ├── theme/                       # Design System Material 3 (Dark Theme deportivo)
-    ├── navigation/                  # Enrutamiento tipado (NavHost / Screen routes)
+    ├── theme/                       # Design System Material 3 (Dark Mode deportivo)
+    ├── navigation/                  # Enrutamiento tipado (NavHost / Compose Navigation)
     ├── home/                        # Dashboard principal y resumen diario
     ├── workout/                     # Registro de sesión en vivo y edición de series
     ├── history/                     # Historial de entrenamientos y récords personales (PRs)
-    ├── exercises/                   # Catálogo de ejercicios y estimación de 1RM
-    ├── profile/                     # Estadísticas temporales, pesajes y perfil
+    ├── exercises/                   # Catálogo de ejercicios y gestión de equipamiento
+    ├── profile/                     # Estadísticas, calendario de pesajes y perfil
     └── coach/                       # Chatbot interactivo con Google Gemini
 ```
 
-### Justificación Arquitectónica:
-* **Independencia y Testabilidad del Dominio**: La capa `domain` no posee dependencias de Compose, Supabase, Android ni iOS. Todas las fórmulas biomecánicas y reglas de negocio son evaluables mediante tests unitarios rápidos y deterministas en JVM/KMP.
-* **Flujo Unidireccional de Datos (UDF)**: Cada `ViewModel` expone un único `StateFlow<UiState>` inmutable. Los componentes Compose reaccionan exclusivamente a cambios en este estado y propagan eventos de usuario hacia el ViewModel, garantizando estabilidad y evitando condiciones de carrera.
-* **Separación de Responsabilidades (SoC)**: Los cambios en la capa de datos (como la API de Supabase o la integración de Gemini) no impactan en la lógica de dominio ni en la capa visual.
-* **Reutilización Multiplataforma Real**: Al evitar APIs específicas de plataforma (como `java.time.*` o `java.util.UUID`), el código compila de forma idéntica y nativa en Android e iOS.
+---
+
+### Comparativa con Otras Arquitecturas
+
+| Criterio | MVC / Monolito en Activity | MVP / MVVM Tradicional (Sin Clean) | Redux / MVI Puro | Clean Architecture + MVVM + UDF (Elegida) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Acoplamiento** | Muy Alto (Lógica atada al ciclo de vida de la vista) | Medio (ViewModels acoplados a APIs de red/BD) | Bajo | **Mínimo** (Dominio 100% aislado sin dependencias externas) |
+| **Testabilidad** | Difícil (Requiere emuladores o mocks de UI) | Parcial (Requiere mockear capas de datos) | Alta | **Máxima** (Casos de uso testeables en milisegundos con JUnit puro) |
+| **Reutilización Multiplataforma** | Nula (Específico de cada plataforma) | Limitada a la capa de datos | Alta | **Total** (100% de dominio, datos y Compose UI compartidos) |
+| **Complejidad / Boilerplate** | Baja al inicio, inmanejable al escalar | Moderada | Muy Alta (Exceso de reducers, middlewares y actions) | **Equilibrada** (Modular, escalable y sin sobrecarga innecesaria) |
+| **Previsibilidad del Estado** | Baja (Múltiples fuentes de verdad) | Media (Posibles condiciones de carrera) | Muy Alta | **Máxima** (`StateFlow<UiState>` inmutable con flujo unidireccional) |
+
+### ¿Por qué elegimos Clean Architecture + MVVM + UDF?
+
+1. **Aislamiento Total del Dominio**: La capa `domain` no contiene imports de Android, iOS, Supabase ni Compose. Las reglas biomecánicas son atemporales y no cambian si se migra de base de datos o de framework de UI.
+2. **Flujo Unidireccional de Datos (UDF)**: Cada `ViewModel` expone un único `val uiState: StateFlow<ScreenUiState>`. La UI es una función pura del estado; los eventos del usuario fluyen hacia el ViewModel y el nuevo estado inmutable desciende hacia la UI, erradicando bugs de estado inconsistente.
+3. **Mantenibilidad y Escalabilidad**: Agregar nuevas fuentes de datos o modificar servicios externos (ej. cambiar de Supabase a otra API) requiere editar únicamente `data/`, dejando `domain/` y `presentation/` intactos.
 
 ---
 
-## 3. ¿Qué herramientas de IA se utilizaron y cómo ayudaron a acelerar el desarrollo?
+## 3. Pruebas Unitarias, Integración Continua (CI) y Despliegue Continuo (CD)
 
-El desarrollo de GymTracker se orquestó adoptando un enfoque de copiloto e ingeniería asistida por Inteligencia Artificial:
+La confiabilidad técnica y la estabilidad total (cero crashes) son pilares fundamentales del proyecto.
 
-### 1. Antigravity IDE & AI Assistant (Google DeepMind)
-* **Arquitectura y Estructura KMP**: Asistencia en la configuración del entorno multiplataforma Gradle, inyección de dependencias con **Koin**, y scaffolding de capas según los principios de Clean Architecture.
-* **Modelado y Mappers Bidireccionales**: Generación precisa de DTOs serializables con `@SerialName` alineados con el esquema relacional de Supabase y extension functions para conversión de dominio.
-* **Implementación de Componentes Gráficos**: Co-diseño de componentes visuales avanzados en **Compose Multiplatform Canvas**, tales como gráficos de volumen con curvas cúbicas de Bézier, sombreado degradado y cuadrículas analíticas.
-* **Cobertura y QA Unitario**: Redacción de suites de pruebas unitarias exhaustivas en `commonTest` para validar casos de borde en cálculos de 1RM, tonelaje y manejo de errores.
+### Pruebas Unitarias (Unit Tests)
 
-### 2. Google Gemini API (Coach de IA Integrado en la App)
-* **Asesoramiento Personalizado en Tiempo Real**: Se diseñó el cliente `GeminiApiClient` y el caso de uso `BuildAiUserDataContextUseCase`, los cuales estructuran un contexto con los entrenamientos recientes y ejercicios del usuario para alimentar el modelo de lenguaje (`gemini-flash-lite-latest` y fallbacks).
-* **Resiliencia ante Sobrecarga de Tráfico**: Detección de límites de tasa (429/503) con reintento automático progresivo mientras la UI mantiene el estado de pensamiento activo, ocultando detalles técnicos al usuario y ofreciendo una experiencia fluida.
+#### ¿Por qué están y para qué sirven?
+* **Validación de Algoritmos Biomecánicos**: Garantizan que fórmulas críticas como la proyección de 1RM y el tonelaje de volumen arrojen valores matemáticamente correctos ante cualquier combinación de datos y casos límite (peso cero, RIR máximo, repeticiones únicas).
+* **Prevención de Regresiones**: Cada vez que se añade una funcionalidad o se refactoriza código, la suite de tests valida instantáneamente que el comportamiento preexistente no se haya roto.
+* **Documentación Viva**: Los tests describen con precisión el comportamiento esperado de cada caso de uso y ViewModel.
+
+#### Cobertura en `commonTest`:
+* **Dominio**:
+  * `CalculateOneRepMaxUseCaseTest`: Validación de la fórmula de Epley ponderada por RIR, límites de entrada y casos de 1 repetición.
+  * `CalculateWorkoutVolumeUseCaseTest`: Suma precisa de tonelaje y filtrado de series válidas.
+  * `CalculateMuscleGroupVolumeUseCaseTest`: Distribución y cálculo porcentual por grupo muscular.
+  * `GetExerciseHistoryUseCaseTest`: Estimación del historial de 1RM ordenado cronológicamente.
+* **Presentación (ViewModels)**:
+  * `WorkoutSessionViewModelTest`: Flujo UDF, mutación de series, adición/eliminación, precarga automática de registros previos y guardado.
+  * `ExercisesViewModelTest`: Búsqueda, filtrado por grupo muscular, creación de ejercicios con equipamiento y eliminación.
+  * `DashboardViewModelTest`: Resumen del día y cálculo de volumen acumulado.
+
+---
+
+### Integración Continua (CI) y Despliegue Continuo (CD)
+
+El proyecto cuenta con un pipeline automatizado de **GitHub Actions** configurado en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) que se ejecuta en cada **Pull Request** hacia `main` y `develop`.
+
+```text
+Flujo del Pipeline de CI:
+1. Checkout del Repositorio
+2. Configuración de Entorno (JDK 17 + Gradle Wrapper)
+3. Ejecución de Tests Unitarios de Dominio y Compartidos (:shared:testDebugUnitTest)
+4. Publicación Automática de Reporte JUnit en los Checks de la PR
+5. Verificación de Integridad KMP (compileCommonMainKotlinMetadata)
+6. Análisis Estático de Código con Android Lint (:androidApp:lintDebug)
+7. Verificación de Compilación de la Aplicación (:androidApp:assembleDebug)
+8. Carga de Artefactos y Reportes de Cobertura
+```
+
+#### Ventajas del Pipeline de CI/CD:
+1. **Puerta de Calidad Automática**: Ningún código puede integrarse a `develop` o `main` si rompe tests unitarios o introduce errores de compilación multiplataforma.
+2. **Validación de Metadatos Multiplataforma**: La tarea `compileCommonMainKotlinMetadata` verifica que no se hayan introducido APIs exclusivas de JVM/Android en código compartido.
+3. **Análisis Estático (Lint)**: Detecta advertencias de accesibilidad, rendimiento y buenas prácticas de Android automáticamente.
+4. **Reportes Transparentes en GitHub**: Los resultados de las pruebas se publican directamente en la vista del Pull Request con detalle de tests ejecutados y tiempos de respuesta.
 
 ---
 
@@ -76,9 +148,9 @@ El desarrollo de GymTracker se orquestó adoptando un enfoque de copiloto e inge
 
 | Componente / Tecnología | Propósito | Beneficio Técnico |
 | :--- | :--- | :--- |
-| **Kotlin Multiplatform (KMP 2.x)** | Core Multiplataforma | 100% de lógica de negocio, datos y modelos compartidos entre plataformas. |
-| **Compose Multiplatform** | UI Declarativa | Interfaz nativa compartida para Android e iOS con diseño responsivo. |
-| **Supabase Postgrest (`supabase-kt`)** | Backend & Base de Datos | Consultas a PostgreSQL mediante cliente tipado con Row-Level Security (RLS). |
+| **Kotlin Multiplatform (KMP 2.x)** | Core Multiplataforma | 100% de lógica de negocio, datos y modelos compartidos entre Android e iOS. |
+| **Compose Multiplatform** | UI Declarativa | Interfaz nativa compartida para Android e iOS con diseño responsivo y fluido. |
+| **Supabase Postgrest (`supabase-kt`)** | Backend & Base de Datos | Consultas tipadas a PostgreSQL con seguridad a nivel de fila (RLS). |
 | **Supabase Auth** | Autenticación | Control de sesiones seguras mediante correo y contraseña. |
 | **Google Gemini REST API** | Inteligencia Artificial | Chatbot deportivo interactivo con conocimiento del contexto del atleta. |
 | **Koin** | Inyección de Dependencias | Framework ligero de DI nativo para Kotlin Multiplatform. |
@@ -88,20 +160,19 @@ El desarrollo de GymTracker se orquestó adoptando un enfoque de copiloto e inge
 
 ---
 
-## 5. Lógica de Negocio y Fórmulas Matemáticas
+## 5. Herramientas de IA y Metodología de Desarrollo
 
-### 1. Cálculo de 1RM Estimado (`CalculateOneRepMaxUseCase`)
-Aplica la fórmula de **Epley** ajustada por las repeticiones en reserva (**RIR**), calculando las repeticiones efectivas al fallo ($r_{\text{eff}} = \text{reps} + \text{rir}$):
+El desarrollo de GymTracker se estructuró adoptando un enfoque de ingeniería asistida por Inteligencia Artificial:
 
-$$\text{1RM} = \text{peso\_kg} \times \left(1 + \frac{\text{reps} + \text{rir}}{30.0}\right)$$
+### 1. Antigravity IDE & AI Assistant (Google DeepMind)
+* **Arquitectura y Estructura KMP**: Configuración modular Gradle, inyección con **Koin** y scaffolding de capas Clean Architecture.
+* **Modelado y Mappers Bidireccionales**: Generación precisa de DTOs serializables con `@SerialName` alineados con el esquema relacional de Supabase.
+* **Componentes Gráficos en Canvas**: Diseño de curvas cúbicas de Bézier, sombreado degradado y cuadrículas analíticas en Compose Canvas.
+* **Cobertura de Tests Unitarios**: Redacción de suites de tests unitarios exhaustivas en `commonTest`.
 
-* *Caso base*: Si $\text{reps} = 1$ y $\text{rir} = 0$, el 1RM es exactamente $\text{peso\_kg}$.
-* *Límites*: Si $\text{peso\_kg} \le 0$ o $\text{reps} \le 0$, retorna $0.0$.
-
-### 2. Cálculo de Tonelaje Total (`CalculateWorkoutVolumeUseCase`)
-Calcula el tonelaje acumulado de todas las series válidas de una sesión:
-
-$$\text{Volumen Total (kg)} = \sum_{i=1}^{n} (\text{peso\_kg}_i \times \text{reps}_i)$$
+### 2. Google Gemini API (Coach de IA Integrado en la App)
+* **Asesoramiento Personalizado en Tiempo Real**: Cliente `GeminiApiClient` y caso de uso `BuildAiUserDataContextUseCase` que estructuran el contexto del usuario para alimentar el modelo de lenguaje (`gemini-flash-lite-latest` y fallbacks).
+* **Resiliencia ante Sobrecarga**: Manejo transparente de límites de tasa (429/503) con reintento automático mientras la UI muestra el estado de pensamiento activo.
 
 ---
 
@@ -110,7 +181,7 @@ $$\text{Volumen Total (kg)} = \sum_{i=1}^{n} (\text{peso\_kg}_i \times \text{rep
 ### Requisitos Previos
 * **Java Development Kit (JDK)**: Versión 17 o superior.
 * **Android Studio**: Ladybug / Meerkat o superior con Android SDK configurado.
-* **Xcode**: Versión 15+ (necesario únicamente para compilar y ejecutar en el simulador de iOS / macOS).
+* **Xcode**: Versión 15 o superior (necesario para compilar y ejecutar en el simulador o dispositivo iOS en macOS).
 * **Git**: Para el control de versiones.
 
 ---
@@ -148,22 +219,46 @@ Si deseas conectar tu propia instancia de Supabase:
 
 ---
 
-### Paso 4: Compilar y Ejecutar
+### Paso 4: Compilación y Ejecución
 
 #### En Android:
-Desde la terminal o desde el botón **Run** en Android Studio:
+
+**Opción A — Desde Android Studio:**
+1. Abre la carpeta del proyecto en Android Studio.
+2. Espera a que finalice la sincronización de Gradle.
+3. Selecciona la configuración de ejecución `androidApp` en la barra superior.
+4. Elige un emulador o dispositivo físico y presiona **Run** (o `Shift + F10`).
+
+**Opción B — Desde la Terminal (Gradle CLI):**
 ```bash
-# Compilar e instalar en emulador o dispositivo conectado
+# Compilar el APK de depuración
+./gradlew :androidApp:assembleDebug
+
+# Instalar y ejecutar directamente en un emulador o dispositivo conectado
 ./gradlew :androidApp:installDebug
 ```
 
-#### En iOS (requiere macOS y Xcode):
-```bash
-open iosApp/iosApp.xcworkspace
-```
-Selecciona el dispositivo/simulador deseado en Xcode y presiona **Cmd + R**.
+---
 
-#### Ejecutar Suite de Tests Unitarios:
+#### En iOS (requiere macOS y Xcode):
+
+**Opción A — Desde Xcode:**
+1. Abre el proyecto de Xcode desde la terminal o el Finder:
+   ```bash
+   open iosApp/iosApp.xcodeproj
+   ```
+2. Selecciona el esquema `iosApp` y tu simulador de iOS de preferencia (ej. iPhone 15 Pro).
+3. Presiona **Cmd + R** o el botón **Run** para compilar y lanzar la aplicación.
+
+**Opción B — Compilación previa del framework compartido desde Gradle:**
+```bash
+# Compila el framework embebido para el simulador de iOS
+./gradlew :shared:embedAndSignAppleFrameworkForXcode
+```
+
+---
+
+#### Ejecución de Tests Unitarios Multiplataforma:
 ```bash
 ./gradlew :shared:testDebugUnitTest
 ```
