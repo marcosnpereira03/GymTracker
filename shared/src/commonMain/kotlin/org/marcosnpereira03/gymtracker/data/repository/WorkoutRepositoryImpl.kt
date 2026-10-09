@@ -22,40 +22,8 @@ class WorkoutRepositoryImpl(
     private val supabaseClient: SupabaseClient
 ) : WorkoutRepository {
 
-    // Caché en memoria con datos de ejemplo para inicio inmediato y funcionamiento offline
-    private val inMemoryWorkouts = mutableListOf<Workout>().apply {
-        add(
-            Workout(
-                id = UuidUtil.ensureUuid("demo-w1"),
-                title = "Torso Pesado (Pecho & Espalda)",
-                date = Instant.parse("2026-10-02T18:30:00Z"),
-                bodyWeight = 78.5,
-                notes = "Excelente sesión, buena congestión en press de banca.",
-                sets = listOf(
-                    WorkoutSet(id = UuidUtil.ensureUuid("s1"), workoutId = UuidUtil.ensureUuid("demo-w1"), exerciseId = UuidUtil.ensureUuid("ex-1"), setNumber = 1, weightKg = 90.0, reps = 8, rir = 2),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s2"), workoutId = UuidUtil.ensureUuid("demo-w1"), exerciseId = UuidUtil.ensureUuid("ex-1"), setNumber = 2, weightKg = 95.0, reps = 6, rir = 1),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s3"), workoutId = UuidUtil.ensureUuid("demo-w1"), exerciseId = UuidUtil.ensureUuid("ex-1"), setNumber = 3, weightKg = 100.0, reps = 4, rir = 0),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s4"), workoutId = UuidUtil.ensureUuid("demo-w1"), exerciseId = UuidUtil.ensureUuid("ex-8"), setNumber = 1, weightKg = 80.0, reps = 10, rir = 2),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s5"), workoutId = UuidUtil.ensureUuid("demo-w1"), exerciseId = UuidUtil.ensureUuid("ex-8"), setNumber = 2, weightKg = 90.0, reps = 8, rir = 1)
-                )
-            )
-        )
-        add(
-            Workout(
-                id = UuidUtil.ensureUuid("demo-w2"),
-                title = "Pierna Enfoque Cuádriceps",
-                date = Instant.parse("2026-09-29T17:00:00Z"),
-                bodyWeight = 78.2,
-                notes = "Sentadillas profundas con pausa.",
-                sets = listOf(
-                    WorkoutSet(id = UuidUtil.ensureUuid("s6"), workoutId = UuidUtil.ensureUuid("demo-w2"), exerciseId = UuidUtil.ensureUuid("ex-4"), setNumber = 1, weightKg = 110.0, reps = 8, rir = 2),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s7"), workoutId = UuidUtil.ensureUuid("demo-w2"), exerciseId = UuidUtil.ensureUuid("ex-4"), setNumber = 2, weightKg = 120.0, reps = 6, rir = 1),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s8"), workoutId = UuidUtil.ensureUuid("demo-w2"), exerciseId = UuidUtil.ensureUuid("ex-4"), setNumber = 3, weightKg = 130.0, reps = 4, rir = 0),
-                    WorkoutSet(id = UuidUtil.ensureUuid("s9"), workoutId = UuidUtil.ensureUuid("demo-w2"), exerciseId = UuidUtil.ensureUuid("ex-6"), setNumber = 1, weightKg = 70.0, reps = 12, rir = 1)
-                )
-            )
-        )
-    }
+    // Caché en memoria para funcionamiento offline y sincronización
+    private val inMemoryWorkouts = mutableListOf<Workout>()
 
     private var isLastFetchOffline = false
 
@@ -84,13 +52,9 @@ class WorkoutRepositoryImpl(
                 val sortedWorkouts = remoteWorkouts.reversed().sortedByDescending { it.date }
 
                 isLastFetchOffline = false
-                if (remoteWorkouts.isNotEmpty()) {
-                    inMemoryWorkouts.clear()
-                    inMemoryWorkouts.addAll(sortedWorkouts)
-                    sortedWorkouts
-                } else {
-                    inMemoryWorkouts.reversed().sortedByDescending { it.date }
-                }
+                inMemoryWorkouts.clear()
+                inMemoryWorkouts.addAll(sortedWorkouts)
+                sortedWorkouts
             } catch (e: Exception) {
                 println("Error fetching workouts from Supabase (Offline mode active): ${e.message}")
                 isLastFetchOffline = true

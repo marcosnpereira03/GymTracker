@@ -27,6 +27,9 @@ val generatedConfigDir = layout.buildDirectory.dir("generated/config/commonMain/
 val generateAppConfig = tasks.register("generateAppConfig") {
     val outputDir = generatedConfigDir.get().asFile
     outputs.dir(outputDir)
+    inputs.property("geminiKey", getSecret("GEMINI_API_KEY", ""))
+    inputs.property("supabaseUrl", getSecret("SUPABASE_URL", ""))
+    inputs.property("supabaseAnonKey", getSecret("SUPABASE_ANON_KEY", ""))
     doLast {
         val geminiKey = getSecret("GEMINI_API_KEY", "")
         val supabaseUrl = getSecret("SUPABASE_URL", "")
