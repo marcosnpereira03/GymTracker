@@ -54,6 +54,7 @@ import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 import org.marcosnpereira03.gymtracker.presentation.util.rememberImagePickerLauncher
 import org.marcosnpereira03.gymtracker.presentation.util.rememberRemoteImage
+import kotlinx.datetime.*
 
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -79,8 +80,8 @@ fun ProfileScreen(
     if (showLogWeightDialog) {
         LogWeightDialog(
             onDismiss = { showLogWeightDialog = false },
-            onConfirm = { weight, notes ->
-                viewModel.onAddWeightLog(weight, notes)
+            onConfirm = { weight, notes, date ->
+                viewModel.onAddWeightLog(weight, notes, date)
                 showLogWeightDialog = false
             }
         )
@@ -1600,10 +1601,12 @@ fun EditProfileDialog(
 @Composable
 fun LogWeightDialog(
     onDismiss: () -> Unit,
-    onConfirm: (weightKg: Double, notes: String?) -> Unit
+    onConfirm: (weightKg: Double, notes: String?, date: kotlin.time.Instant) -> Unit
 ) {
     var weightText by remember { mutableStateOf("") }
     var notesText by remember { mutableStateOf("") }
+    val todayDate = remember { org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.today() }
+    var dateText by remember { mutableStateOf(todayDate.toString()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1635,6 +1638,64 @@ fun LogWeightDialog(
                     )
                 )
 
+                // Selector y campo de Fecha
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Fecha del pesaje:", color = Zinc400, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val isToday = dateText == todayDate.toString()
+                        val yesterdayDate = remember {
+                            todayDate.minus(1, kotlinx.datetime.DateTimeUnit.DAY)
+                        }
+                        val isYesterday = dateText == yesterdayDate.toString()
+
+                        FilterChip(
+                            selected = isToday,
+                            onClick = { dateText = todayDate.toString() },
+                            label = { Text("Hoy", fontSize = 11.sp) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Emerald400,
+                                selectedLabelColor = Color.Black,
+                                containerColor = Zinc800,
+                                labelColor = Zinc300
+                            )
+                        )
+
+                        FilterChip(
+                            selected = isYesterday,
+                            onClick = { dateText = yesterdayDate.toString() },
+                            label = { Text("Ayer", fontSize = 11.sp) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Emerald400,
+                                selectedLabelColor = Color.Black,
+                                containerColor = Zinc800,
+                                labelColor = Zinc300
+                            )
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = dateText,
+                        onValueChange = { dateText = it },
+                        label = { Text("Fecha (AAAA-MM-DD)", color = Zinc400) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = White,
+                            unfocusedTextColor = White,
+                            focusedBorderColor = Emerald400,
+                            unfocusedBorderColor = Zinc700,
+                            focusedContainerColor = Zinc900,
+                            unfocusedContainerColor = Zinc900
+                        )
+                    )
+                }
+
                 OutlinedTextField(
                     value = notesText,
                     onValueChange = { notesText = it },
@@ -1657,7 +1718,8 @@ fun LogWeightDialog(
             Button(
                 onClick = {
                     val w = weightText.replace(',', '.').toDoubleOrNull() ?: 0.0
-                    onConfirm(w, notesText)
+                    val parsedInstant = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.parseDateOrNow(dateText)
+                    onConfirm(w, notesText, parsedInstant)
                 },
                 enabled = weightText.replace(',', '.').toDoubleOrNull() != null && (weightText.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0,
                 colors = ButtonDefaults.buttonColors(

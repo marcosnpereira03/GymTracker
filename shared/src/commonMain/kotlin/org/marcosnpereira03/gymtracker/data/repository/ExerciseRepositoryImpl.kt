@@ -40,6 +40,8 @@ class ExerciseRepositoryImpl(
         Exercise(id = UuidUtil.ensureUuid("ex-18"), name = "Extensión de Tríceps en Polea Alta", muscleGroup = "Tríceps")
     )
 
+    private val deletedExerciseIds = mutableSetOf<String>()
+
     private val inMemoryCache = mutableListOf<Exercise>().apply {
         addAll(defaultExercises)
     }
@@ -52,27 +54,35 @@ class ExerciseRepositoryImpl(
                     .decodeList<ExerciseDto>()
                     .map { it.toDomain() }
 
-                if (remoteList.isNotEmpty()) {
-                    inMemoryCache.clear()
-                    inMemoryCache.addAll(remoteList.sortedBy { it.name.lowercase() })
-                    inMemoryCache.toList()
-                } else {
-                    // Si Supabase no tiene ejercicios aún para este usuario, auto-sembrar los iniciales
-                    val currentUserId = supabaseClient.auth.currentUserOrNull()?.id
-                    if (currentUserId != null) {
-                        try {
-                            val defaultDtos = defaultExercises.map { it.toDto(currentUserId) }
-                            supabaseClient.from("ejercicios").upsert(defaultDtos)
-                        } catch (e: Exception) {
-                            println("Supabase seed error: ${e.message}")
-                        }
+                // Unificamos el catálogo base predeterminado con los ejercicios remotos del usuario
+                val combinedMap = defaultExercises
+                    .filterNot { it.id in deletedExerciseIds }
+                    .associateBy { it.id }
+                    .toMutableMap()
+
+                remoteList
+                    .filterNot { it.id in deletedExerciseIds }
+                    .forEach { remoteEx ->
+                        combinedMap[remoteEx.id] = remoteEx
                     }
-                    inMemoryCache.sortedBy { it.name.lowercase() }
-                }
+
+                val fullList = combinedMap.values.sortedBy { it.name.lowercase() }
+
+                inMemoryCache.clear()
+                inMemoryCache.addAll(fullList)
+                fullList
             } catch (e: Exception) {
                 println("Error fetching exercises from Supabase: ${e.message}")
-                // Si la red falla, respondemos con la caché resiliente
-                inMemoryCache.sortedBy { it.name.lowercase() }
+                val combinedMap = defaultExercises
+                    .filterNot { it.id in deletedExerciseIds }
+                    .associateBy { it.id }
+                    .toMutableMap()
+                inMemoryCache
+                    .filterNot { it.id in deletedExerciseIds }
+                    .forEach { cachedEx ->
+                        combinedMap[cachedEx.id] = cachedEx
+                    }
+                combinedMap.values.sortedBy { it.name.lowercase() }
             }
         }
     }
@@ -136,6 +146,8 @@ class ExerciseRepositoryImpl(
     override suspend fun deleteExercise(id: String): Result<Unit> {
         return runCatching {
             val validId = UuidUtil.ensureUuid(id)
+            deletedExerciseIds.add(validId)
+            deletedExerciseIds.add(id)
             try {
                 supabaseClient.from("ejercicios").delete {
                     filter {

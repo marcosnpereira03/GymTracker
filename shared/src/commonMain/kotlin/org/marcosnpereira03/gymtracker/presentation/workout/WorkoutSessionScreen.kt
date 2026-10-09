@@ -1121,40 +1121,36 @@ fun CompactSetRow(
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Columna RIR (Selector o Input directo de RIR)
-        var rirMenuExpanded by remember { mutableStateOf(false) }
+        // Columna RIR (Input numérico directo de RIR: 0 a 10)
         Box(
             modifier = Modifier
-                .weight(0.9f)
+                .weight(1.0f)
                 .height(34.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(Zinc900)
                 .border(1.dp, Zinc800, RoundedCornerShape(6.dp))
-                .clickable { rirMenuExpanded = true },
+                .padding(horizontal = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "${set.rir}",
-                color = if (set.rir == 0) Red500 else White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+            BasicTextField(
+                value = if (set.rir >= 0) set.rir.toString() else "0",
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() }.take(2)
+                    val rirInt = filtered.toIntOrNull() ?: 0
+                    val clamped = rirInt.coerceIn(0, 10)
+                    onUpdate(set.weightText, set.repsText, clamped)
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                textStyle = TextStyle(
+                    color = if (set.rir == 0) Red500 else White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                ),
+                cursorBrush = SolidColor(Emerald400),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-
-            DropdownMenu(
-                expanded = rirMenuExpanded,
-                onDismissRequest = { rirMenuExpanded = false },
-                modifier = Modifier.background(Zinc900)
-            ) {
-                (0..5).forEach { rirVal ->
-                    DropdownMenuItem(
-                        text = { Text("RIR $rirVal", color = White, fontWeight = FontWeight.Bold) },
-                        onClick = {
-                            onUpdate(set.weightText, set.repsText, rirVal)
-                            rirMenuExpanded = false
-                        }
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.width(4.dp))
