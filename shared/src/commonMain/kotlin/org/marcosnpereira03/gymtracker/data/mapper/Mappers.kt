@@ -64,15 +64,7 @@ fun WorkoutSet.toDto(userId: String? = null): WorkoutSetDto {
 
 // Workout Mappers
 fun WorkoutDto.toDomain(sets: List<WorkoutSet> = emptyList()): Workout {
-    val parsedInstant = try {
-        if (date.contains("T")) {
-            Instant.parse(date)
-        } else {
-            Instant.parse("${date}T00:00:00Z")
-        }
-    } catch (_: Exception) {
-        Instant.fromEpochMilliseconds(0)
-    }
+    val parsedInstant = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.parseDateOrNow(date)
 
     return Workout(
         id = id,
@@ -85,7 +77,7 @@ fun WorkoutDto.toDomain(sets: List<WorkoutSet> = emptyList()): Workout {
 }
 
 fun Workout.toDto(userId: String? = null): WorkoutDto {
-    val dateString = date.toString().substringBefore('T')
+    val dateString = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(date)
     return WorkoutDto(
         id = id,
         userId = userId,
@@ -97,15 +89,7 @@ fun Workout.toDto(userId: String? = null): WorkoutDto {
 
 // BodyWeightLog Mappers
 fun BodyWeightLogDto.toDomain(): BodyWeightLog {
-    val parsedInstant = try {
-        if (date.contains("T")) {
-            Instant.parse(date)
-        } else {
-            Instant.parse("${date}T00:00:00Z")
-        }
-    } catch (_: Exception) {
-        Instant.fromEpochMilliseconds(0)
-    }
+    val parsedInstant = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.parseDateOrNow(date)
 
     return BodyWeightLog(
         id = id,
@@ -116,7 +100,7 @@ fun BodyWeightLogDto.toDomain(): BodyWeightLog {
 }
 
 fun BodyWeightLog.toDto(userId: String? = null): BodyWeightLogDto {
-    val dateString = date.toString().substringBefore('T')
+    val dateString = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(date)
     return BodyWeightLogDto(
         id = id,
         userId = userId,

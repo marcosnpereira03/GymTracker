@@ -188,13 +188,13 @@ fun HistoryScreen(
                 // ==========================================
                 val selectedDateStr = selectedDate.toString()
                 val matchingWorkouts = state.workouts.filter {
-                    it.workout.date.toString().substringBefore("T") == selectedDateStr
+                    org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(it.workout.date) == selectedDateStr
                 }
 
                 // Días del mes con entrenamientos registrados (para los puntitos verdes)
                 val monthPrefix = "${displayedYear}-${if (displayedMonth < 10) "0$displayedMonth" else "$displayedMonth"}-"
                 val daysWithWorkouts = state.workouts.mapNotNull {
-                    val dStr = it.workout.date.toString().substringBefore("T")
+                    val dStr = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(it.workout.date)
                     if (dStr.startsWith(monthPrefix)) {
                         dStr.substringAfterLast("-").toIntOrNull()
                     } else null

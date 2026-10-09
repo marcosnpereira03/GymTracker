@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
+import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -277,7 +278,7 @@ fun WorkoutSessionScreen(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                val dateStr = state.date?.toString()?.substringBefore("T") ?: "04/10/2026"
+                                val dateStr = state.date?.let { DateTimeUtil.toLocalDateString(it) } ?: DateTimeUtil.toLocalDateString(DateTimeUtil.now())
                                 Text(
                                     text = dateStr,
                                     color = White,
@@ -923,7 +924,7 @@ fun ExerciseHistoryDialog(
                                                     modifier = Modifier.size(14.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
-                                                val dateFormatted = session.workoutDate.toString().substringBefore("T")
+                                                val dateFormatted = DateTimeUtil.toLocalDateString(session.workoutDate)
                                                 Text(
                                                     text = dateFormatted,
                                                     color = White,

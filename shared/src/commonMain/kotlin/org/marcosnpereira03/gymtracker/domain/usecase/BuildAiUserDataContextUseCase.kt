@@ -4,6 +4,7 @@ import org.marcosnpereira03.gymtracker.domain.repository.AuthRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ExerciseRepository
 import org.marcosnpereira03.gymtracker.domain.repository.ProfileRepository
 import org.marcosnpereira03.gymtracker.domain.repository.WorkoutRepository
+import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 
 /**
  * Caso de uso encargado de consolidar los datos del usuario desde Supabase (catálogo de ejercicios,
@@ -61,7 +62,7 @@ class BuildAiUserDataContextUseCase(
         } else {
             // Tomamos hasta los 15 entrenamientos más recientes
             workouts.take(15).forEach { workout ->
-                val dateStr = workout.date.toString().substringBefore("T")
+                val dateStr = DateTimeUtil.toLocalDateString(workout.date)
                 sb.appendLine("• Sesión: ${workout.title} | Fecha: $dateStr")
                 if (!workout.notes.isNullOrBlank()) {
                     sb.appendLine("  Notas: ${workout.notes}")

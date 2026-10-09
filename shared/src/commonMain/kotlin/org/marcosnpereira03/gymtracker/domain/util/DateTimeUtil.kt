@@ -18,6 +18,14 @@ object DateTimeUtil {
         return now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     }
 
+    fun toLocalDate(instant: Instant): LocalDate {
+        return instant.toLocalDateTime(TimeZone.currentSystemDefault()).date
+    }
+
+    fun toLocalDateString(instant: Instant): String {
+        return toLocalDate(instant).toString()
+    }
+
     fun currentTimestampString(): String {
         return now().toString()
     }
