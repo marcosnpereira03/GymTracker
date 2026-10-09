@@ -1043,7 +1043,7 @@ fun PersonalRecordCard(pr: PersonalRecord) {
                         fontSize = 11.sp
                     )
                 }
-                val dateStr = pr.date.toString().substringBefore('T')
+                val dateStr = DateTimeUtil.toLocalDateString(pr.date)
                 Text(
                     text = "$dateStr  •  ${pr.muscleGroup}",
                     color = Zinc500,

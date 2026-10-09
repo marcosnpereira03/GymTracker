@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.marcosnpereira03.gymtracker.domain.model.Exercise
 import org.marcosnpereira03.gymtracker.domain.model.ExerciseHistoryItem
+import org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil
 import org.marcosnpereira03.gymtracker.presentation.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -376,7 +377,7 @@ fun ExerciseItemCard(
 
 @Composable
 fun HistorySetRow(item: ExerciseHistoryItem) {
-    val dateStr = item.workoutDate.toString().substringBefore("T")
+    val dateStr = DateTimeUtil.toLocalDateString(item.workoutDate)
     Row(
         modifier = Modifier
             .fillMaxWidth()

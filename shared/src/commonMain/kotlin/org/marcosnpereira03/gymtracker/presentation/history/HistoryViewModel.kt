@@ -144,7 +144,7 @@ class HistoryViewModel(
         workouts.sortedByDescending { it.date }.forEach { workout ->
             val matchingSets = workout.sets.filter { it.exerciseId == exerciseId }
             if (matchingSets.isNotEmpty()) {
-                val dateStr = workout.date.toString().substringBefore("T")
+                val dateStr = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(workout.date)
                 matchedRecords.add(
                     ExerciseSessionRecord(
                         workoutId = workout.id,

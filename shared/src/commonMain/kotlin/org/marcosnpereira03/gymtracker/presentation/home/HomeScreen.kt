@@ -626,7 +626,7 @@ fun WorkoutSummaryCard(
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        val dateStr = workout.date.toString().substringBefore("T")
+                        val dateStr = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(workout.date)
                         Text(
                             text = dateStr,
                             color = Zinc500,

@@ -285,7 +285,7 @@ class WorkoutSessionViewModel(
         val lastSession = pastSessions.firstOrNull() ?: return null
         val bestOrFirstSet = lastSession.sets.maxByOrNull { it.weightKg } ?: lastSession.sets.firstOrNull() ?: return null
 
-        val dateStr = lastSession.workoutDate.toString().substringBefore("T")
+        val dateStr = org.marcosnpereira03.gymtracker.domain.util.DateTimeUtil.toLocalDateString(lastSession.workoutDate)
         val weightFormatted = if (bestOrFirstSet.weightKg % 1.0 == 0.0) "${bestOrFirstSet.weightKg.toInt()}" else "${bestOrFirstSet.weightKg}"
         val summary = "$weightFormatted kg × ${bestOrFirstSet.reps} (RIR ${bestOrFirstSet.rir})"
 
