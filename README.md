@@ -23,17 +23,21 @@ En contraste, **GymTracker** fundamenta su seguimiento en **modelos matemáticos
 #### 1. Cálculo de 1RM Estimado Ajustado por Esfuerzo en Reserva (`CalculateOneRepMaxUseCase`)
 GymTracker proyecta la repetición máxima teórica utilizando la fórmula de **Epley** ponderada por el **RIR (Reps In Reserve)**, donde las repeticiones efectivas al fallo son $r_{\text{eff}} = \text{reps} + \text{rir}$:
 
-$$\text{1RM} = \text{peso\_kg} \times \left(1 + \frac{\text{reps} + \text{rir}}{30.0}\right)$$
+```math
+\text{1RM} = \text{peso} \times \left(1 + \frac{\text{reps} + \text{rir}}{30.0}\right)
+```
 
 * **Casos base y restricciones de seguridad**:
-  * Si $\text{reps} = 1$ y $\text{rir} = 0$, el 1RM es exactamente $\text{peso\_kg}$.
-  * Si $\text{peso\_kg} \le 0$ o $\text{reps} \le 0$, retorna $0.0$.
+  * Si $\text{reps} = 1$ y $\text{rir} = 0$, el 1RM es exactamente el $\text{peso}$.
+  * Si $\text{peso} \le 0$ o $\text{reps} \le 0$, retorna $0.0$.
   * Rango válido estricto: $0 \le \text{RIR} \le 10$ ($0$ = fallo concéntrico absoluto, $2$ = 2 repeticiones antes del fallo).
 
 #### 2. Cálculo de Tonelaje Total y Sobrecarga Progresiva (`CalculateWorkoutVolumeUseCase`)
 Cuantifica la carga externa total de una sesión sumando el tonelaje de todas las series completadas:
 
-$$\text{Volumen Total (kg)} = \sum_{i=1}^{n} (\text{peso\_kg}_i \times \text{reps}_i)$$
+```math
+\text{Volumen Total} = \sum_{i=1}^{n} (\text{peso}_i \times \text{reps}_i)
+```
 
 #### 3. Distribución del Volumen por Grupo Muscular (`CalculateMuscleGroupVolumeUseCase`)
 Agrupa y pondera el tonelaje entre los 12 grupos musculares anatómicos (*Pecho, Espalda, Bíceps, Tríceps, Hombros, Antebrazos, Cuádriceps, Isquios, Glúteos, Gemelos, Aductores, Abductores*), permitiendo detectar desbalances de volumen y optimizar la periodización.
@@ -41,7 +45,7 @@ Agrupa y pondera el tonelaje entre los 12 grupos musculares anatómicos (*Pecho,
 ---
 
 ### Funcionalidades Principales
-1. **Registro Granular de Entrenamientos**: Carga de series en tiempo real con peso ($\text{kg}$), repeticiones, RIR numérico y selección de equipamiento (*Barra, Mancuernas, Polea, Máquina, Peso libre*).
+1. **Registro Granular de Entrenamientos**: Carga de series en tiempo real con peso (kg), repeticiones, RIR numérico y selección de equipamiento (*Barra, Mancuernas, Polea, Máquina, Peso libre*).
 2. **Precarga Inteligente de Historial**: Al añadir un ejercicio a la sesión, precarga automáticamente las cargas de la última vez que fue realizado.
 3. **Calendario Interactivo de Pesajes**: Registro del peso corporal en cualquier fecha histórica navegando mes a mes en un calendario interactivo.
 4. **Analítica Visual con Compose Canvas**: Gráficos interactivos en tiempo real con curvas de Bézier cúbicas y filtros temporales (Día, Semana, Mes, Histórico).
