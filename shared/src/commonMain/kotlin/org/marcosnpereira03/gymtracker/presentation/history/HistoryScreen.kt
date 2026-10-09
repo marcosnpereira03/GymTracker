@@ -954,13 +954,17 @@ fun CalendarWorkoutCard(
                                 text = exName.uppercase(),
                                 color = White,
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = exMuscle.uppercase(),
                                 color = Zinc400,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
 

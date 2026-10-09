@@ -1203,12 +1203,12 @@ fun ExercisePickerDialog(
     var searchQuery by remember { mutableStateOf("") }
     var selectedMuscleGroup by remember { mutableStateOf("Todos") }
 
-    val defaultMuscleGroups = listOf("Todos", "Pecho", "Espalda", "Cuádriceps", "Isquios", "Glúteos", "Hombros", "Bíceps", "Tríceps", "Abdomen", "Piernas")
+    val defaultMuscleGroups = listOf("Todos", "Pecho", "Espalda", "Bíceps", "Tríceps", "Hombros", "Antebrazos", "Cuádriceps", "Isquios", "Glúteos", "Gemelos", "Aductores", "Abductores")
     val dynamicGroups = remember(exercises) {
         val extracted = exercises.map { it.muscleGroup.trim() }.filter { it.isNotBlank() }.distinct()
-        (listOf("Todos") + extracted).distinct()
+        (listOf("Todos") + (defaultMuscleGroups.filterNot { it == "Todos" } + extracted).distinct()).distinct()
     }
-    val muscleCategories = if (dynamicGroups.size > 1) dynamicGroups else defaultMuscleGroups
+    val muscleCategories = dynamicGroups
 
     val filteredExercises = remember(exercises, searchQuery, selectedMuscleGroup) {
         exercises.filter { ex ->
